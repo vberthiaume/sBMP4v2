@@ -278,4 +278,8 @@ private:
     float curVelocity = 0.f;
     float curSubLevel = 0.f;
     float oscMix = 0.f;
+
+    bool rampingUp = false, rampingDown = false;
+    int curRampSample = 0, samplesLeft = 0;
+    float lastRampValue = 0.f;
 };

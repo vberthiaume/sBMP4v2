@@ -11,6 +11,11 @@
 #include "SineWaveVoice.h"
 #include "ButtonGroupComponent.h"
 
+enum
+{
+    rampLenghtSamples = 300
+};
+
 template <typename Type>
 void GainedOscillator<Type>::setOscShape (int newShape)
 {
@@ -296,6 +301,11 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
 
     curVelocity = velocity;
 
+    rampingUp = true;
+    rampingDown = false;
+    lastRampValue = 0;
+    samplesLeft = rampLenghtSamples;
+
     updateOscLevels();
 }
 
@@ -311,6 +321,11 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     {
         if (stopNoteRequested)
             return;
+
+        rampingUp = false;
+        rampingDown = true;
+        lastRampValue = 1;
+        samplesLeft = rampLenghtSamples;
 
         adsr.noteOff();
         stopNoteRequested = true;
@@ -405,6 +420,28 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
     }
 
     dsp::AudioBlock<float> (outputBuffer).getSubBlock ((size_t) startSample, (size_t) numSamples).add (osc2Block);
+
+    if (rampingUp)
+    {
+        auto curRampLenght = jmin (numSamples, samplesLeft);
+
+        auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
+
+        outputBuffer.applyGainRamp (0, curRampLenght, lastRampValue, nextRampValue);
+
+        lastRampValue = nextRampValue;
+        samplesLeft = samplesLeft - numSamples < 0 ? samplesLeft : samplesLeft - numSamples;
+
+        if (lastRampValue >= 1.f)
+            rampingUp = false;
+
+        for (int i = 0; i < numSamples; ++i)
+            DBG (String (outputBuffer.getSample (0, i)));
+    }
+    else if (rampingDown)
+    {
+
+    }
 }
 
 void sBMP4Voice::processEnvelope (dsp::AudioBlock<float> block)
