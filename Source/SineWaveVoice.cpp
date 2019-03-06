@@ -389,16 +389,16 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
     for (size_t pos = 0; pos < numSamples;)
     {
-        auto max = jmin (static_cast<size_t> (numSamples - pos), lfoUpdateCounter);
+        auto curBlockSize = jmin (static_cast<size_t> (numSamples - pos), lfoUpdateCounter);
 
         //process osc1
-        auto block1 = osc1Output.getSubBlock (pos, max);
+        auto block1 = osc1Output.getSubBlock (pos, curBlockSize);
         dsp::ProcessContextReplacing<float> osc1Context (block1);
         sub.process (osc1Context);
         osc1.process (osc1Context);
 
         //process osc2
-        auto block2 = osc2Output.getSubBlock (pos, max);
+        auto block2 = osc2Output.getSubBlock (pos, curBlockSize);
         dsp::ProcessContextReplacing<float> osc2Context (block2);
         osc2.process (osc2Context);
 
@@ -409,8 +409,37 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
         processEnvelope (block2);
 
-        pos += max;
-        lfoUpdateCounter -= max;
+        if (rampingUp)
+        {
+            auto curRampLenght = jmin ((int) curBlockSize, samplesLeft);
+            auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
+
+            for (size_t c = 0; c < block2.getNumChannels(); ++c)
+            {
+                for (int i = 0; i < curRampLenght; ++i)
+                {
+                    auto value = block2.getSample (c, i);
+                    auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
+
+                    block2.setSample (c, i, value * ramp);
+                }
+            }
+
+            lastRampValue = nextRampValue;
+            samplesLeft = samplesLeft - (curBlockSize - pos) < 0 ? samplesLeft : samplesLeft - (curBlockSize - pos);
+
+            if (lastRampValue >= 1.f)
+                rampingUp = false;
+
+
+        }
+        else if (rampingDown)
+        {
+
+        }
+
+        pos += curBlockSize;
+        lfoUpdateCounter -= curBlockSize;
 
         if (lfoUpdateCounter == 0)
         {
@@ -420,28 +449,6 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
     }
 
     dsp::AudioBlock<float> (outputBuffer).getSubBlock ((size_t) startSample, (size_t) numSamples).add (osc2Block);
-
-    if (rampingUp)
-    {
-        auto curRampLenght = jmin (numSamples, samplesLeft);
-
-        auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
-
-        outputBuffer.applyGainRamp (0, curRampLenght, lastRampValue, nextRampValue);
-
-        lastRampValue = nextRampValue;
-        samplesLeft = samplesLeft - numSamples < 0 ? samplesLeft : samplesLeft - numSamples;
-
-        if (lastRampValue >= 1.f)
-            rampingUp = false;
-
-        for (int i = 0; i < numSamples; ++i)
-            DBG (String (outputBuffer.getSample (0, i)));
-    }
-    else if (rampingDown)
-    {
-
-    }
 }
 
 void sBMP4Voice::processEnvelope (dsp::AudioBlock<float> block)

@@ -27,8 +27,6 @@ namespace Constants
     static const auto defaultAmpD = .1f;
     static const auto defaultAmpS = 1.f;
     static const auto defaultAmpR = .25f;
-    static const auto sustainSkewFactor = .5f;
-    static const auto ampSkewFactor = .1f;
 
     static const float defaultLfoFreq = 3.f;
     static const float defaultLfoAmount = 0.f;
@@ -38,10 +36,20 @@ namespace Constants
     static const NormalisableRange<float> dBRange = {-12.f, 12.f};
     static const NormalisableRange<float> sliderRange = {0.f, 1.f};
     static const NormalisableRange<float> centeredSliderRange = {-0.5f, .5f};
-    static const NormalisableRange<float> sustainRange = {std::numeric_limits<float>::epsilon(), 1.f, 0.f, sustainSkewFactor};
-    static const NormalisableRange<float> ampRange = {std::numeric_limits<float>::epsilon(), 25.f, 0.f, ampSkewFactor};
 
-    static const NormalisableRange<float> hzRange = {0.1f, 18000.f};
+    //envelope ranges
+    static const auto minDecay = .003f;
+    static const auto minRelease = .0003f;
+    static const auto sustainSkewFactor = .5f;
+    static const auto ampSkewFactor = .1f;
+    static const auto cutOffSkewFactor = .5f;
+
+    static const NormalisableRange<float> attackRange = {std::numeric_limits<float>::epsilon(), 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> decayRange = {minDecay, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> sustainRange = {std::numeric_limits<float>::epsilon(), 1.f, 0.f, sustainSkewFactor};
+    static const NormalisableRange<float> releaseRange = {minRelease, 25.f, 0.f, ampSkewFactor};
+
+    static const NormalisableRange<float> cutOffRange = {0.1f, 18000.f, 0.f, cutOffSkewFactor};
     static const NormalisableRange<float> lfoRange = {0.1f, 10.f};
     static const NormalisableRange<float> lfoNoteRange = {0.f, 16.f};
 
@@ -58,7 +66,7 @@ namespace Constants
         defaultOscMix = 0,
         defaultOscTuning = 0,
 
-        numVoices = 16,
+        numVoices = 1,
         defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
         middleCMidiNote = 60,       //C3 on rev2
     };
