@@ -88,6 +88,29 @@ public:
             operation (dynamic_cast<sBMP4Voice*> (voice), newValue);
     }
 
+    void noteOn (const int midiChannel,
+                          const int midiNoteNumber,
+                          const float velocity) override
+    {
+        {
+            const ScopedLock sl (lock);
+
+            int numVoicesActive = 0;
+            for (auto voice : voices)
+                if (voice->isVoiceActive())
+                    ++numVoicesActive;
+
+            auto numVoicesToKill = numVoicesActive - numVoicesSoft;
+
+            while (numVoicesToKill-- > 0)
+                for (auto* sound : sounds)
+                    if (sound->appliesToNote (midiNoteNumber) && sound->appliesToChannel (midiChannel))
+                        findFreeVoice (sound, midiChannel, midiNoteNumber, true)->stopNote (1.0f, true);
+        }
+
+        Synthesiser::noteOn (midiChannel, midiNoteNumber, velocity);
+    }
+
 private:
 
     enum

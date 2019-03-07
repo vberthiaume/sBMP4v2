@@ -442,9 +442,7 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
             rampSamplesLeft = rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
 
             if (lastRampValue >= 1.f)
-            {
                 rampingUp = false;
-            }
         }
 
         pos += curBlockSize;
