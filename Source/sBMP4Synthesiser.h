@@ -95,16 +95,5 @@ private:
         reverbIndex
     };
 
-    void renderVoices (AudioBuffer<float>& outputAudio, int startSample, int numSamples) override
-    {
-        for (auto* voice : voices)
-            voice->renderNextBlock (outputAudio, startSample, numSamples);
-
-        //auto block = dsp::AudioBlock<float> (outputAudio);
-        //auto blockToUse = block.getSubBlock ((size_t) startSample, (size_t) numSamples);
-        //auto contextToUse = dsp::ProcessContextReplacing<float> (blockToUse);
-        //fxChain.process (contextToUse);
-    }
-
     dsp::ProcessorChain<dsp::Reverb> fxChain;
 };

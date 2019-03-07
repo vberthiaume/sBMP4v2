@@ -247,7 +247,7 @@ private:
     float nextSustain = defaultAmpS;
     float nextRelease = defaultAmpR;
 #endif
-    bool stopNoteRequested = false;
+    bool currentlyReleasingNote = false;
 
     float curFilterCutoff = defaultFilterCutoff;
     float curFilterResonance = defaultFilterResonance;
@@ -280,6 +280,6 @@ private:
     float oscMix = 0.f;
 
     bool rampingUp = false, rampingDown = false;
-    int curRampSample = 0, samplesLeft = 0;
+    int curRampSample = 0, rampSamplesLeft = 0;
     float lastRampValue = 0.f;
 };

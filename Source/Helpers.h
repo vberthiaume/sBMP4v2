@@ -37,17 +37,20 @@ namespace Constants
     static const NormalisableRange<float> sliderRange = {0.f, 1.f};
     static const NormalisableRange<float> centeredSliderRange = {-0.5f, .5f};
 
-    //envelope ranges
-    static const auto minDecay = .003f;
-    static const auto minRelease = .0003f;
+    //envelope ranges  
+    static const auto minA = .0f; /*std::numeric_limits<float>::epsilon()*/
+    static const auto minD = .0f;
+    static const auto minS = .0f;
+    static const auto minR = .0f;
+    
     static const auto sustainSkewFactor = .5f;
     static const auto ampSkewFactor = .1f;
     static const auto cutOffSkewFactor = .5f;
 
-    static const NormalisableRange<float> attackRange = {std::numeric_limits<float>::epsilon(), 25.f, 0.f, ampSkewFactor};
-    static const NormalisableRange<float> decayRange = {minDecay, 25.f, 0.f, ampSkewFactor};
-    static const NormalisableRange<float> sustainRange = {std::numeric_limits<float>::epsilon(), 1.f, 0.f, sustainSkewFactor};
-    static const NormalisableRange<float> releaseRange = {minRelease, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> attackRange = {minA, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> decayRange = {minD, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> sustainRange = {minS, 1.f, 0.f, sustainSkewFactor};
+    static const NormalisableRange<float> releaseRange = {minR, 25.f, 0.f, ampSkewFactor};
 
     static const NormalisableRange<float> cutOffRange = {0.1f, 18000.f, 0.f, cutOffSkewFactor};
     static const NormalisableRange<float> lfoRange = {0.1f, 10.f};
@@ -66,7 +69,7 @@ namespace Constants
         defaultOscMix = 0,
         defaultOscTuning = 0,
 
-        numVoices = 1,
+        numVoices = 16,
         defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
         middleCMidiNote = 60,       //C3 on rev2
     };

@@ -13,7 +13,7 @@
 
 enum
 {
-    rampLenghtSamples = 300
+    rampLenghtSamples = 100
 };
 
 template <typename Type>
@@ -164,11 +164,11 @@ void sBMP4Voice::updateOscFrequencies()
 
 void sBMP4Voice::setAmpParam (StringRef parameterID, float newValue)
 {
-    if (newValue <= 0)
-    {
-        jassertfalse;
-        newValue = std::numeric_limits<float>::epsilon();
-    }
+    //if (newValue <= 0)
+    //{
+    //    jassertfalse;
+    //    newValue = std::numeric_limits<float>::epsilon();
+    //}
 
 #if RAMP_ADSR
 
@@ -304,7 +304,7 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     rampingUp = true;
     rampingDown = false;
     lastRampValue = 0;
-    samplesLeft = rampLenghtSamples;
+    rampSamplesLeft = rampLenghtSamples;
 
     updateOscLevels();
 }
@@ -319,22 +319,16 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
 {
     if (allowTailOff)
     {
-        if (stopNoteRequested)
-            return;
-
-        rampingUp = false;
-        rampingDown = true;
-        lastRampValue = 1;
-        samplesLeft = rampLenghtSamples;
-
-        adsr.noteOff();
-        stopNoteRequested = true;
+        if (! currentlyReleasingNote)
+            adsr.noteOff();
+        
+        currentlyReleasingNote = true;
     }
     else
     {
         clearCurrentNote();
-        adsr.reset();
-        stopNoteRequested = false;
+        //adsr.reset();
+        currentlyReleasingNote = false;
     }
 }
 
@@ -407,35 +401,46 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         dsp::ProcessContextReplacing<float> summedContext (block2);
         processorChain.process (summedContext);
 
-        processEnvelope (block2);
+        if (adsr.isActive())
+            processEnvelope (block2);
 
-        if (rampingUp)
+        if (rampingUp || rampingDown)
         {
-            auto curRampLenght = jmin ((int) curBlockSize, samplesLeft);
-            auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
+            auto curRampLenght = jmin ((int) curBlockSize, rampSamplesLeft);
+            //auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
+            auto nextRampValue = rampingUp ? lastRampValue + (float) curRampLenght / rampLenghtSamples
+                                           : lastRampValue - (float) curRampLenght / rampLenghtSamples;
 
-            for (size_t c = 0; c < block2.getNumChannels(); ++c)
+            for (int c = 0; c < block2.getNumChannels(); ++c)
             {
-                for (int i = 0; i < curRampLenght; ++i)
-                {
-                    auto value = block2.getSample (c, i);
-                    auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
+                if (rampingUp)
+                    for (int i = 0; i < curRampLenght; ++i)
+                    {
+                        auto value = block2.getSample (c, i);
+                        auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
 
-                    block2.setSample (c, i, value * ramp);
-                }
+                        block2.setSample (c, i, value * ramp);
+                    }
+                else
+                    for (int i = 0; i < curRampLenght; ++i)
+                    {
+                        auto value = block2.getSample (c, i);
+                        auto ramp = lastRampValue - i * (nextRampValue - lastRampValue) / (curRampLenght);
+
+                        block2.setSample (c, i, value * ramp);
+                    }
             }
 
             lastRampValue = nextRampValue;
-            samplesLeft = samplesLeft - (curBlockSize - pos) < 0 ? samplesLeft : samplesLeft - (curBlockSize - pos);
+            rampSamplesLeft = rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
 
-            if (lastRampValue >= 1.f)
+            if (rampingUp && lastRampValue >= 1.f)
                 rampingUp = false;
-
-
-        }
-        else if (rampingDown)
-        {
-
+            else if (rampingDown && lastRampValue <= 0.f)
+            {
+                rampingDown = false;
+                stopNote (0.f, false);
+            }
         }
 
         pos += curBlockSize;
@@ -459,11 +464,21 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float> block)
     for (auto start = 0; start < samples; ++start)
     {
         auto env = adsr.getNextSample();
+        //DBG (env);
 
         for (int i = 0; i < numChannels; ++i)
             block.getChannelPointer (i)[start] *= env;
     }
 
-    if (stopNoteRequested && !adsr.isActive())
-        stopNote (0.f, false);
+    if (currentlyReleasingNote && !adsr.isActive())
+    {
+        //stopNote (0.f, false);
+        
+        adsr.reset();
+        currentlyReleasingNote = false;
+
+        rampingDown = true;
+        lastRampValue = 1;
+        rampSamplesLeft = rampLenghtSamples;
+    }
 }
