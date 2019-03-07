@@ -299,44 +299,7 @@ void sBMP4Voice::pitchWheelMoved (int newPitchWheelValue)
     updateOscFrequencies();
 }
 
-void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserSound* /*sound*/, int currentPitchWheelPosition)
-{
-    //DBG ("start note : " + String (getCurrentlyPlayingNote()));
-
-    pitchWheelPosition = currentPitchWheelPosition;
-    adsr.noteOn();
-    updateOscFrequencies();
-
-    curVelocity = velocity;
-
-    rampingUp = true;
-    rampingDown = false;
-    lastRampValue = 0;
-    rampSamplesLeft = rampLenghtSamples;
-
-    updateOscLevels();
-}
-
-void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
-{
-    //DBG ("stop note : " + String ((int) allowTailOff) + " " +  String (getCurrentlyPlayingNote()));
-
-    if (allowTailOff)
-    {
-        if (! currentlyReleasingNote)
-            adsr.noteOff();
-        else
-            jassertfalse;
-
-        currentlyReleasingNote = true;
-    }
-    else
-    {
-        clearCurrentNote();
-    }
-}
-
-    //@TODO For now, all lfos oscillate between [0, 1], even though the random one (an only that one) should oscilate between [-1, 1]
+//@TODO For now, all lfos oscillate between [0, 1], even though the random one (an only that one) should oscilate between [-1, 1]
 void sBMP4Voice::updateLfo()
 {
     float lfoOut;
@@ -374,6 +337,72 @@ void sBMP4Voice::updateLfo()
     }
 }
 
+void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserSound* /*sound*/, int currentPitchWheelPosition)
+{
+    //DBG ("start note : " + String (getCurrentlyPlayingNote()));
+
+    pitchWheelPosition = currentPitchWheelPosition;
+    adsr.noteOn();
+    updateOscFrequencies();
+
+    curVelocity = velocity;
+
+    rampingUp = true;
+    //rampingDown = false;
+    lastRampValue = 0;
+    rampSamplesLeft = rampLenghtSamples;
+
+    updateOscLevels();
+}
+
+void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
+{
+    if (allowTailOff)
+    {
+        if (! currentlyReleasingNote)
+            adsr.noteOff();
+        else
+            jassertfalse;
+
+        currentlyReleasingNote = true;
+    }
+    else
+    {
+        clearCurrentNote();
+    }
+}
+
+void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
+{
+    auto samples = block.getNumSamples();
+    auto numChannels = block.getNumChannels();
+
+    float env{};
+    for (auto i = 0; i < samples; ++i)
+    {
+        env = adsr.getNextSample();
+
+        for (int c = 0; c < numChannels; ++c)
+            block.getChannelPointer (c)[i] *= env;
+    }
+
+    if (currentlyReleasingNote && !adsr.isActive())
+    {
+        currentlyReleasingNote = false;
+
+        //if (env > 0.f)
+        //{
+        //    //this will litterally never happen
+        //    jassertfalse;
+        //    rampingDown = true;
+        //    lastRampValue = env;
+        //    rampSamplesLeft = rampLenghtSamples;
+        //}
+        //else
+            stopNote (0.f, false);
+    }
+}
+
 void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
 {
     if (! isVoiceActive())
@@ -408,16 +437,17 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         //during this call, the voice may become inactive, but we still have to finish this loop to ensure the voice stays muted for the rest of the buffer
         processEnvelope (block2);
 
-        if (rampingUp || rampingDown)
+        if (rampingUp/* || rampingDown*/)
         {
             auto curRampLenght = jmin ((int) curBlockSize, rampSamplesLeft);
+            auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
 
-            auto nextRampValue = rampingUp ? lastRampValue + (float) curRampLenght / rampLenghtSamples
-                                           : lastRampValue - (float) curRampLenght / rampLenghtSamples;
+            //auto nextRampValue = rampingUp ? lastRampValue + (float) curRampLenght / rampLenghtSamples
+            //                               : lastRampValue - (float) curRampLenght / rampLenghtSamples;
 
             for (int c = 0; c < block2.getNumChannels(); ++c)
             {
-                if (rampingUp)
+                //if (rampingUp)
                     for (int i = 0; i < curRampLenght; ++i)
                     {
                         auto value = block2.getSample (c, i);
@@ -425,26 +455,28 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
                         block2.setSample (c, i, value * ramp);
                     }
-                else
-                    for (int i = 0; i < curRampLenght; ++i)
-                    {
-                        auto value = block2.getSample (c, i);
-                        auto ramp = lastRampValue - i * (nextRampValue - lastRampValue) / (curRampLenght);
+                //else
+                //    for (int i = 0; i < curRampLenght; ++i)
+                //    {
+                //        auto value = block2.getSample (c, i);
+                //        auto ramp = lastRampValue - i * (nextRampValue - lastRampValue) / (curRampLenght);
 
-                        block2.setSample (c, i, value * ramp);
-                    }
+                //        block2.setSample (c, i, value * ramp);
+                //    }
             }
 
             lastRampValue = nextRampValue;
             rampSamplesLeft = rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
 
-            if (rampingUp && lastRampValue >= 1.f)
-                rampingUp = false;
-            else if (rampingDown && lastRampValue <= 0.f)
+            if (/*rampingUp && */lastRampValue >= 1.f)
             {
-                rampingDown = false;
-                stopNote (0.f, false);
+                rampingUp = false;
             }
+            //else if (rampingDown && lastRampValue <= 0.f)
+            //{
+            //    rampingDown = false;
+            //    stopNote (0.f, false);
+            //}
         }
 
         pos += curBlockSize;
@@ -458,34 +490,4 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
     }
 
     dsp::AudioBlock<float> (outputBuffer).getSubBlock ((size_t) startSample, (size_t) numSamples).add (osc2Block);
-}
-
-void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
-{
-    auto samples = block.getNumSamples();
-    auto numChannels = block.getNumChannels();
-
-    float env{};
-    for (auto i = 0; i < samples; ++i)
-    {
-        env = adsr.getNextSample();
-        //DBG (env);
-
-        for (int c = 0; c < numChannels; ++c)
-            block.getChannelPointer (c)[i] *= env;
-    }
-
-    if (currentlyReleasingNote && !adsr.isActive())
-    {       
-        currentlyReleasingNote = false;
-
-        if (env > 0.f)
-        {
-            rampingDown = true;
-            lastRampValue = env;
-            rampSamplesLeft = rampLenghtSamples;
-        }
-        else
-            stopNote (0.f, false);
-    }
 }

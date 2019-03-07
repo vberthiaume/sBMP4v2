@@ -40,11 +40,11 @@ namespace Constants
     //envelope ranges
     static const auto minA = .0f; /*std::numeric_limits<float>::epsilon()*/
     static const auto minD = .0f;
-    static const auto minS = .0f;
-    static const auto minR = .0f;
+    static const auto minR = .01f;
+    static const auto minS = minR;  //adsr requires sustain to be at least the release value
 
     static const auto sustainSkewFactor = .5f;
-    static const auto ampSkewFactor = .1f;
+    static const auto ampSkewFactor = .5f;
     static const auto cutOffSkewFactor = .5f;
 
     static const NormalisableRange<float> attackRange = {minA, 25.f, 0.f, ampSkewFactor};
