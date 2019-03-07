@@ -38,10 +38,11 @@ namespace Constants
     static const NormalisableRange<float> centeredSliderRange = {-0.5f, .5f};
 
     //envelope ranges
-    static const auto minA = .0f; /*std::numeric_limits<float>::epsilon()*/
-    static const auto minD = .0f;
-    static const auto minR = .01f;
-    static const auto minS = minR;  //adsr requires sustain to be at least the release value
+    static const auto min = .01f;
+    static const auto minA = min; /*std::numeric_limits<float>::epsilon()*/
+    static const auto minD = min;
+    static const auto minR = min;
+    static const auto minS = min;
 
     static const auto sustainSkewFactor = .5f;
     static const auto ampSkewFactor = .5f;

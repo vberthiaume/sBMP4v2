@@ -279,7 +279,7 @@ private:
     float curSubLevel = 0.f;
     float oscMix = 0.f;
 
-    bool rampingUp = false/*, rampingDown = false*/;
+    bool rampingUp = false;
     int curRampSample = 0, rampSamplesLeft = 0;
     float lastRampValue = 0.f;
 };

@@ -164,11 +164,11 @@ void sBMP4Voice::updateOscFrequencies()
 
 void sBMP4Voice::setAmpParam (StringRef parameterID, float newValue)
 {
-    //if (newValue <= 0)
-    //{
-    //    jassertfalse;
-    //    newValue = std::numeric_limits<float>::epsilon();
-    //}
+    if (newValue <= 0)
+    {
+        jassertfalse;
+        newValue = std::numeric_limits<float>::epsilon();
+    }
 
 #if RAMP_ADSR
 
@@ -339,8 +339,6 @@ void sBMP4Voice::updateLfo()
 
 void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserSound* /*sound*/, int currentPitchWheelPosition)
 {
-    //DBG ("start note : " + String (getCurrentlyPlayingNote()));
-
     pitchWheelPosition = currentPitchWheelPosition;
     adsr.noteOn();
     updateOscFrequencies();
@@ -348,7 +346,6 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     curVelocity = velocity;
 
     rampingUp = true;
-    //rampingDown = false;
     lastRampValue = 0;
     rampSamplesLeft = rampLenghtSamples;
 
@@ -361,8 +358,6 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     {
         if (! currentlyReleasingNote)
             adsr.noteOff();
-        else
-            jassertfalse;
 
         currentlyReleasingNote = true;
     }
@@ -389,17 +384,7 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
     if (currentlyReleasingNote && !adsr.isActive())
     {
         currentlyReleasingNote = false;
-
-        //if (env > 0.f)
-        //{
-        //    //this will litterally never happen
-        //    jassertfalse;
-        //    rampingDown = true;
-        //    lastRampValue = env;
-        //    rampSamplesLeft = rampLenghtSamples;
-        //}
-        //else
-            stopNote (0.f, false);
+        stopNote (0.f, false);
     }
 }
 
@@ -437,46 +422,29 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         //during this call, the voice may become inactive, but we still have to finish this loop to ensure the voice stays muted for the rest of the buffer
         processEnvelope (block2);
 
-        if (rampingUp/* || rampingDown*/)
+        if (rampingUp)
         {
             auto curRampLenght = jmin ((int) curBlockSize, rampSamplesLeft);
             auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
 
-            //auto nextRampValue = rampingUp ? lastRampValue + (float) curRampLenght / rampLenghtSamples
-            //                               : lastRampValue - (float) curRampLenght / rampLenghtSamples;
-
             for (int c = 0; c < block2.getNumChannels(); ++c)
             {
-                //if (rampingUp)
-                    for (int i = 0; i < curRampLenght; ++i)
-                    {
-                        auto value = block2.getSample (c, i);
-                        auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
+                for (int i = 0; i < curRampLenght; ++i)
+                {
+                    auto value = block2.getSample (c, i);
+                    auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
 
-                        block2.setSample (c, i, value * ramp);
-                    }
-                //else
-                //    for (int i = 0; i < curRampLenght; ++i)
-                //    {
-                //        auto value = block2.getSample (c, i);
-                //        auto ramp = lastRampValue - i * (nextRampValue - lastRampValue) / (curRampLenght);
-
-                //        block2.setSample (c, i, value * ramp);
-                //    }
+                    block2.setSample (c, i, value * ramp);
+                }
             }
 
             lastRampValue = nextRampValue;
             rampSamplesLeft = rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
 
-            if (/*rampingUp && */lastRampValue >= 1.f)
+            if (lastRampValue >= 1.f)
             {
                 rampingUp = false;
             }
-            //else if (rampingDown && lastRampValue <= 0.f)
-            //{
-            //    rampingDown = false;
-            //    stopNote (0.f, false);
-            //}
         }
 
         pos += curBlockSize;
