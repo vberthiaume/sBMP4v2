@@ -229,7 +229,7 @@ public:
 private:
 
     void updateLfo();
-    void processEnvelope (dsp::AudioBlock<float> block2);
+    void processEnvelope (dsp::AudioBlock<float>& block2);
 
     int voiceId;
 
