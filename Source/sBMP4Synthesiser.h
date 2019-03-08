@@ -86,19 +86,12 @@ public:
             operation (dynamic_cast<sBMP4Voice*> (voice), newValue);
     }
 
-    void noteOn (const int midiChannel,
-                          const int midiNoteNumber,
-                          const float velocity) override
+    void noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) override
     {
         {
             const ScopedLock sl (lock);
 
-            int numVoicesActive = 0;
-            for (auto voice : voices)
-                if (voice->isVoiceActive())
-                    ++numVoicesActive;
-
-            auto numVoicesToKill = numVoicesActive - numVoicesSoft;
+            auto numVoicesToKill = (int) activeVoices.size() - numVoicesSoft;
 
             while (numVoicesToKill-- > 0)
                 dynamic_cast<sBMP4Voice*> (findVoiceToSteal (*sounds.begin(), midiChannel, midiNoteNumber))->killNote();
@@ -199,7 +192,7 @@ private:
 
     //@TODO: make this into a bit mask thing? is there any concurency issues here?
     //@TODO Should I have voices on different threads?
-    std::set<int> activeVoices;
+    std::set<int> activeVoices{};
 
     dsp::ProcessorChain<dsp::Reverb> fxChain;
 };
