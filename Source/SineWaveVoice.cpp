@@ -101,8 +101,9 @@ void GainedOscillator<Type>::setOscShape (int newShape)
 }
 
 
-sBMP4Voice::sBMP4Voice (int vId) :
-voiceId (vId)
+sBMP4Voice::sBMP4Voice (int vId, std::set<int>* activeVoiceSet) :
+voiceId (vId),
+activeVoices (activeVoiceSet)
 {
     processorChain.get<masterGainIndex>().setGainLinear (defaultOscLevel);
     processorChain.get<filterIndex>().setCutoffFrequencyHz (defaultFilterCutoff);
@@ -282,7 +283,6 @@ void sBMP4Voice::setLfoShape (int shape)
 
 void sBMP4Voice::setLfoDest (int dest)
 {
-
     //reset everything
     lfoOsc1NoteOffset = 0.f;
     lfoOsc2NoteOffset = 0.f;
@@ -339,8 +339,11 @@ void sBMP4Voice::updateLfo()
 
 void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserSound* /*sound*/, int currentPitchWheelPosition)
 {
-    pitchWheelPosition = currentPitchWheelPosition;
+    adsr.setParameters (curParams);
     adsr.noteOn();
+    activeVoices->insert (voiceId);
+
+    pitchWheelPosition = currentPitchWheelPosition;
     updateOscFrequencies();
 
     curVelocity = velocity;
@@ -364,7 +367,21 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     else
     {
         clearCurrentNote();
+        activeVoices->erase (voiceId);
     }
+}
+
+void sBMP4Voice::killNote()
+{
+    if (! currentlyReleasingNote)
+    {
+        auto paramCopy = curParams;
+        paramCopy.release = minR;
+        adsr.setParameters (paramCopy);
+        adsr.noteOff();
+    }
+
+    currentlyReleasingNote = true;
 }
 
 void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)

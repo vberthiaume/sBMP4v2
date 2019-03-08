@@ -12,11 +12,12 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "Helpers.h"
 #include <mutex>
+#include <set>
 #include "ButtonGroupComponent.h"
 
-struct SineWaveSound : public SynthesiserSound
+struct sBMP4Sound : public SynthesiserSound
 {
-    SineWaveSound() {}
+    sBMP4Sound() {}
 
     bool appliesToNote    (int) override { return true; }
     bool appliesToChannel (int) override { return true; }
@@ -109,7 +110,7 @@ public:
         osc2Index,
     };
 
-    sBMP4Voice (int voiceId);
+    sBMP4Voice (int voiceId, std::set<int>* activeVoiceArray);
 
     void prepare (const dsp::ProcessSpec& spec);
 
@@ -216,7 +217,9 @@ public:
 
     void stopNote (float /*velocity*/, bool allowTailOff) override;
 
-    bool canPlaySound (SynthesiserSound* sound) override { return dynamic_cast<SineWaveSound*> (sound) != nullptr; }
+    void killNote();
+
+    bool canPlaySound (SynthesiserSound* sound) override { return dynamic_cast<sBMP4Sound*> (sound) != nullptr; }
 
     void renderNextBlock (AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
@@ -232,6 +235,7 @@ private:
     void processEnvelope (dsp::AudioBlock<float>& block2);
 
     int voiceId;
+    std::set<int>* activeVoices;
 
     HeapBlock<char> heapBlock1, heapBlock2;
     dsp::AudioBlock<float> osc1Block, osc2Block;

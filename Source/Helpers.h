@@ -70,8 +70,8 @@ namespace Constants
         defaultOscMix = 0,
         defaultOscTuning = 0,
 
-        numVoices = 32,
-        numVoicesSoft = 16,
+        numVoices = 16,
+        numVoicesSoft = 8,
         defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
         middleCMidiNote = 60,       //C3 on rev2
     };
