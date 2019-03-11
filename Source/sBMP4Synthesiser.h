@@ -19,7 +19,7 @@ public:
     sBMP4Synthesiser()
     {
         for (auto i = 0; i < numVoices; ++i)
-            addVoice (new sBMP4Voice (i, &activeVoices, &voicesBeingKilled));
+            addVoice (new sBMP4Voice (i/*, &activeVoices, &voicesBeingKilled*/));
 
         addSound (new sBMP4Sound());
     }
@@ -83,7 +83,7 @@ public:
         for (auto voice : voices)
             operation (dynamic_cast<sBMP4Voice*> (voice), newValue);
     }
-
+    /*
     void noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) override
     {
         //we have too many voices being played, just forget about this one
@@ -107,7 +107,7 @@ public:
         //    jassertfalse;
     }
 
-    SynthesiserVoice* findFreeVoiceOrSteal (SynthesiserSound* soundToPlay, int /*midiChannel*/, int midiNoteNumber) const
+    SynthesiserVoice* findFreeVoiceOrSteal (SynthesiserSound* soundToPlay, int , int midiNoteNumber) const
     {
         // This voice-stealing algorithm applies the following heuristics:
         // - Re-use the oldest notes first
@@ -131,7 +131,7 @@ public:
             if (voice->canPlaySound (soundToPlay))
             {
                 //do not try to steal/kill this voice if it is currently being killed
-                if (/*! voice->isVoiceActive() || */voicesBeingKilled.find (voice->getVoiceId()) != voicesBeingKilled.end())
+                if (voicesBeingKilled.find (voice->getVoiceId()) != voicesBeingKilled.end())
                     continue;
 
                 usableVoices.add (voice);
@@ -192,6 +192,8 @@ public:
         return low;
     }
 
+    */
+
 private:
 
     enum
@@ -201,8 +203,8 @@ private:
 
     //@TODO: make this into a bit mask thing? is there any concurency issues here?
     //@TODO Should I have voices on different threads?
-    std::set<int> activeVoices{};
-    std::set<int> voicesBeingKilled{};
+    //std::set<int> activeVoices{};
+    //std::set<int> voicesBeingKilled{};
 
     dsp::ProcessorChain<dsp::Reverb> fxChain;
 };

@@ -114,7 +114,7 @@ public:
         osc2Index,
     };
 
-    sBMP4Voice (int voiceId, std::set<int>* activeVoiceSet, std::set<int>* voicesBeingKilledSet);
+    sBMP4Voice (int voiceId/*, std::set<int>* activeVoiceSet, std::set<int>* voicesBeingKilledSet*/);
 
     void prepare (const dsp::ProcessSpec& spec);
 
@@ -241,8 +241,8 @@ private:
     void updateLfo();
     void processEnvelope (dsp::AudioBlock<float>& block2);
 
-    std::set<int>* activeVoices;
-    std::set<int>* voicesBeingKilled;
+    //std::set<int>* activeVoices;
+    //std::set<int>* voicesBeingKilled;
 
     HeapBlock<char> heapBlock1, heapBlock2;
     dsp::AudioBlock<float> osc1Block, osc2Block;

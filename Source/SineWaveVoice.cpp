@@ -101,10 +101,10 @@ void GainedOscillator<Type>::setOscShape (int newShape)
 }
 
 
-sBMP4Voice::sBMP4Voice (int vId, std::set<int>* activeVoiceSet, std::set<int>* voicesBeingKilledSet) :
-voiceId (vId),
-activeVoices (activeVoiceSet),
-voicesBeingKilled (voicesBeingKilledSet)
+sBMP4Voice::sBMP4Voice (int vId/*, std::set<int>* activeVoiceSet, std::set<int>* voicesBeingKilledSet*/) :
+voiceId (vId)
+//activeVoices (activeVoiceSet),
+//voicesBeingKilled (voicesBeingKilledSet)
 {
     processorChain.get<masterGainIndex>().setGainLinear (defaultOscLevel);
     processorChain.get<filterIndex>().setCutoffFrequencyHz (defaultFilterCutoff);
@@ -346,7 +346,7 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
 
     adsr.setParameters (curParams);
     adsr.noteOn();
-    activeVoices->insert (voiceId);
+    //activeVoices->insert (voiceId);
 
     pitchWheelPosition = currentPitchWheelPosition;
     updateOscFrequencies();
@@ -371,7 +371,7 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
 
     if (allowTailOff)
     {
-        if (! currentlyReleasingNote)
+        //if (! currentlyReleasingNote)
             adsr.noteOff();
 
         currentlyReleasingNote = true;
@@ -379,8 +379,8 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     else
     {
         clearCurrentNote();
-        activeVoices->erase (voiceId);
-        voicesBeingKilled->erase (voiceId);
+        //activeVoices->erase (voiceId);
+        //voicesBeingKilled->erase (voiceId);
     }
 }
 
@@ -397,7 +397,7 @@ void sBMP4Voice::killNote()
         adsr.setParameters (paramCopy);
         adsr.noteOff();
 
-        voicesBeingKilled->insert (voiceId);
+        //voicesBeingKilled->insert (voiceId);
         currentlyKillingNote = true;
     }
 
