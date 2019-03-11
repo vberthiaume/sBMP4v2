@@ -15,6 +15,10 @@
 #include <set>
 #include "ButtonGroupComponent.h"
 
+#ifndef DEBUG_VOICES
+#define DEBUG_VOICES 1
+#endif
+
 struct sBMP4Sound : public SynthesiserSound
 {
     sBMP4Sound() {}
@@ -110,7 +114,7 @@ public:
         osc2Index,
     };
 
-    sBMP4Voice (int voiceId, std::set<int>* activeVoiceArray);
+    sBMP4Voice (int voiceId, std::set<int>* activeVoiceSet, std::set<int>* voicesBeingKilledSet);
 
     void prepare (const dsp::ProcessSpec& spec);
 
@@ -225,17 +229,20 @@ public:
 
     void controllerMoved (int /*controllerNumber*/, int /*newValue*/) {}
 
+    int getVoiceId() { return voiceId; }
+
 #if RAMP_ADSR
     void updateNextParams();
 #endif
 
 private:
+    int voiceId;
 
     void updateLfo();
     void processEnvelope (dsp::AudioBlock<float>& block2);
 
-    int voiceId;
     std::set<int>* activeVoices;
+    std::set<int>* voicesBeingKilled;
 
     HeapBlock<char> heapBlock1, heapBlock2;
     dsp::AudioBlock<float> osc1Block, osc2Block;
@@ -251,7 +258,7 @@ private:
     float nextSustain = defaultAmpS;
     float nextRelease = defaultAmpR;
 #endif
-    bool currentlyReleasingNote = false;
+    bool currentlyReleasingNote = false, currentlyKillingNote = false;
 
     float curFilterCutoff = defaultFilterCutoff;
     float curFilterResonance = defaultFilterResonance;

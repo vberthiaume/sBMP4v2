@@ -19,7 +19,7 @@ public:
     sBMP4Synthesiser()
     {
         for (auto i = 0; i < numVoices; ++i)
-            addVoice (new sBMP4Voice (i, &activeVoices));
+            addVoice (new sBMP4Voice (i, &activeVoices, &voicesBeingKilled));
 
         addSound (new sBMP4Sound());
     }
@@ -36,8 +36,6 @@ public:
 
     void parameterChanged (const String& parameterID, float newValue) override
     {
-        //@TODO implement osc1TuningID, osc2TuningID, oscSubID, oscMixID
-
         if (parameterID == sBMP4AudioProcessorIDs::osc1FreqID)
             applyToAllVoices ([](sBMP4Voice* voice, float newValue) { voice->setOscFreq (sBMP4Voice::osc1Index, (int) newValue); }, newValue);
         else if (parameterID == sBMP4AudioProcessorIDs::osc2FreqID)
@@ -88,19 +86,28 @@ public:
 
     void noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) override
     {
+        //we have too many voices being played, just forget about this one
+        if (voicesBeingKilled.size() >= numVoicesSoft)
+            return;
+
         {
             const ScopedLock sl (lock);
 
-            auto numVoicesToKill = (int) activeVoices.size() - numVoicesSoft;
+            auto numVoicesToKill = (int) activeVoices.size() - (int) voicesBeingKilled.size() - numVoicesSoft;
 
             while (numVoicesToKill-- > 0)
-                dynamic_cast<sBMP4Voice*> (findVoiceToSteal (*sounds.begin(), midiChannel, midiNoteNumber))->killNote();
+                if (auto voice = dynamic_cast<sBMP4Voice*> (findFreeVoiceOrSteal (*sounds.begin(), midiChannel, midiNoteNumber)))
+                    voice->killNote();
         }
 
-        Synthesiser::noteOn (midiChannel, midiNoteNumber, velocity);
+        //only start new voices if we have room
+        if (activeVoices.size() < numVoices)
+            Synthesiser::noteOn (midiChannel, midiNoteNumber, velocity);
+        //else
+        //    jassertfalse;
     }
 
-    SynthesiserVoice* findVoiceToSteal (SynthesiserSound* soundToPlay, int /*midiChannel*/, int midiNoteNumber) const override
+    SynthesiserVoice* findFreeVoiceOrSteal (SynthesiserSound* soundToPlay, int /*midiChannel*/, int midiNoteNumber) const
     {
         // This voice-stealing algorithm applies the following heuristics:
         // - Re-use the oldest notes first
@@ -117,12 +124,14 @@ public:
         Array<SynthesiserVoice*> usableVoices;
         usableVoices.ensureStorageAllocated (voices.size());
 
-        for (int i = 0; i < numVoicesSoft; ++i)
+        //@TODO so we only ever try to kill voices in the soft range... is that a problem?
+        for (int i = 0; i < numVoices; ++i)
         {
-            auto voice = voices[i];
+            auto voice = dynamic_cast<sBMP4Voice*> (voices[i]);
             if (voice->canPlaySound (soundToPlay))
             {
-                if (! voice->isVoiceActive())
+                //do not try to steal/kill this voice if it is currently being killed
+                if (/*! voice->isVoiceActive() || */voicesBeingKilled.find (voice->getVoiceId()) != voicesBeingKilled.end())
                     continue;
 
                 usableVoices.add (voice);
@@ -193,6 +202,7 @@ private:
     //@TODO: make this into a bit mask thing? is there any concurency issues here?
     //@TODO Should I have voices on different threads?
     std::set<int> activeVoices{};
+    std::set<int> voicesBeingKilled{};
 
     dsp::ProcessorChain<dsp::Reverb> fxChain;
 };

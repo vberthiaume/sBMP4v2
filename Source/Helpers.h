@@ -43,6 +43,7 @@ namespace Constants
     static const auto minD = min;
     static const auto minR = min;
     static const auto minS = min;
+    static const auto killR = .006f;
 
     static const auto sustainSkewFactor = .5f;
     static const auto ampSkewFactor = .5f;
@@ -70,8 +71,8 @@ namespace Constants
         defaultOscMix = 0,
         defaultOscTuning = 0,
 
-        numVoices = 16,
-        numVoicesSoft = 8,
+        numVoices = 2,
+        numVoicesSoft = 1,
         defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
         middleCMidiNote = 60,       //C3 on rev2
     };
