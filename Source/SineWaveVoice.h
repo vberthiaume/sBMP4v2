@@ -260,7 +260,7 @@ private:
     float nextSustain = defaultAmpS;
     float nextRelease = defaultAmpR;
 #endif
-    bool currentlyReleasingNote = false, currentlyKillingNote = false;
+    bool currentlyReleasingNote = false/*, currentlyKillingNote = false*/;
 
     float curFilterCutoff = defaultFilterCutoff;
     float curFilterResonance = defaultFilterResonance;

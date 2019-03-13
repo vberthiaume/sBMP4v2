@@ -35,7 +35,7 @@ namespace Constants
         defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
         middleCMidiNote = 60,       //C3 on rev2
 
-        overlapSize = 300
+        overlapSize = 528
     };
 
     static const auto defaultOscLevel = .4f;

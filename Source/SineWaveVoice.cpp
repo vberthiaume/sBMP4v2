@@ -134,6 +134,7 @@ void sBMP4Voice::prepare (const dsp::ProcessSpec& spec)
     osc2Block = dsp::AudioBlock<float> (heapBlock2, spec.numChannels, spec.maximumBlockSize);
 
     overlap = std::make_unique<AudioSampleBuffer> (AudioSampleBuffer (spec.numChannels, overlapSize));
+    overlap->clear();
 
     sub.prepare (spec);
     osc1.prepare (spec);
@@ -374,21 +375,21 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
 
     if (allowTailOff)
     {
-        if (! currentlyReleasingNote)
+        //if (! currentlyReleasingNote)
             adsr.noteOff();
 
         currentlyReleasingNote = true;
     }
     else
     {
-        if (getSampleRate() == 0.f)
-            return;
+        if (getSampleRate() != 0.f)
+        {
+            overlap->clear();
+            currentlyKillingVoice = true;
+            renderNextBlock (*overlap, 0, overlapSize);
+            overlapIndex = 0;
+        }
 
-        overlap->clear();
-        currentlyKillingVoice = true;
-        renderNextBlock (*overlap, 0, overlapSize);
-        overlapIndex = 0;
-            
         clearCurrentNote();
         //activeVoices->erase (voiceId);
         //voicesBeingKilled->erase (voiceId);
@@ -435,7 +436,7 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
     if (currentlyReleasingNote && !adsr.isActive())
     {
         currentlyReleasingNote = false;
-        currentlyKillingNote = false;
+        //currentlyKillingNote = false;
 #if DEBUG_VOICES
         DBG ("\tDEBUG ENVELOPPE DONE");
 #endif
@@ -502,7 +503,7 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
         if (overlapIndex > -1)
         {
-            //DBG ("\tDEBUG ADD OVERLAP" + String (overlapIndex));
+            /*DBG ("\tDEBUG ADD OVERLAP" + String (overlapIndex));*/
 
             auto curSamples = jmin (overlapSize - overlapIndex, (int) curBlockSize);
 
@@ -513,10 +514,13 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
                     auto overl = overlap->getSample (c, overlapIndex + i);
                     auto total = prev + overl;
 
+                    jassert (total > -1 && total < 1);
+
                     block2.setSample (c, i, total);
 
                     //if (c == 0)
-                    //    DBG ("\t" + String (prev) + "\t" + String (overl) + "\t" +  String (total));
+                    //    DBG ("ADD\t" + String (overl));
+                        /*DBG ("ADD\t" + String (prev) + "\t" + String (overl) + "\t" +  String (total));*/
                 }
 
             overlapIndex += curSamples;
@@ -545,9 +549,16 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         outputBuffer.applyGainRamp (startSample, numSamples, 1.f, 0.f);
         currentlyKillingVoice = false;
 
+        for (int c = 0; c < outputBuffer.getNumChannels(); ++c)
+            for (int i = 0; i < outputBuffer.getNumSamples(); ++i)
+            {
+                auto asdf = outputBuffer.getSample (c, i);
+                jassert (asdf > -1 && asdf < 1);
+            }
+
         //DBG ("\tDEBUG START RAMP");
         //for (int i = 0; i < outputBuffer.getNumSamples(); ++i)
-        //    DBG (outputBuffer.getSample (0, i));
+        //    DBG ("BUILDING RAMP\t" + String (outputBuffer.getSample (0, i)));
         //DBG ("\tDEBUG stop RAMP");
     }
     //else 
