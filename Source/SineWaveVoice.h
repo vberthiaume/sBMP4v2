@@ -15,9 +15,7 @@
 #include <set>
 #include "ButtonGroupComponent.h"
 
-#ifndef DEBUG_VOICES
-#define DEBUG_VOICES 1
-#endif
+
 
 struct sBMP4Sound : public SynthesiserSound
 {
@@ -247,6 +245,10 @@ private:
     HeapBlock<char> heapBlock1, heapBlock2;
     dsp::AudioBlock<float> osc1Block, osc2Block;
     GainedOscillator<float> sub, osc1, osc2;
+
+    std::unique_ptr<AudioBuffer<float>> overlap;
+    int overlapIndex = -1;
+    bool currentlyKillingVoice = false;
 
     dsp::ProcessorChain<dsp::LadderFilter<float>, dsp::Gain<float>> processorChain;
 

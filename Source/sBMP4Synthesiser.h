@@ -83,6 +83,7 @@ public:
         for (auto voice : voices)
             operation (dynamic_cast<sBMP4Voice*> (voice), newValue);
     }
+
     /*
     void noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) override
     {

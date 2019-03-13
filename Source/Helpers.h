@@ -16,8 +16,28 @@
     #define CPU_USAGE 0
 #endif
 
+#ifndef DEBUG_VOICES
+    #define DEBUG_VOICES 0
+#endif
+
 namespace Constants
 {
+    enum
+    {
+        oscShapeRadioGroupId = 1,
+
+        defaultSubOsc = 0,
+        defaultOscMix = 0,
+        defaultOscTuning = 0,
+
+        numVoices = 1,
+        //numVoicesSoft = 1,
+        defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
+        middleCMidiNote = 60,       //C3 on rev2
+
+        overlapSize = 300
+    };
+
     static const auto defaultOscLevel = .4f;
 
     static const auto defaultFilterCutoff = 1000.f;
@@ -62,20 +82,6 @@ namespace Constants
     //range from 16 Hz to 8KHz (when used with the Transpose buttons). Adjustment is in semitones.
     static const NormalisableRange<int> midiNoteRange = {12, 120};   //actual midi note range is (0,127), but rev2, at least for oscilators is C0(0) to C10(120)
     static const NormalisableRange<float> pitchWheelNoteRange = {-7.f, 7.f};
-
-    enum
-    {
-        oscShapeRadioGroupId = 1,
-
-        defaultSubOsc = 0,
-        defaultOscMix = 0,
-        defaultOscTuning = 0,
-
-        numVoices = 2,
-        numVoicesSoft = 1,
-        defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
-        middleCMidiNote = 60,       //C3 on rev2
-    };
 }
 
 namespace sBMP4AudioProcessorIDs
