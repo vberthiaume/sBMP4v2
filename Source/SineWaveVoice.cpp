@@ -382,13 +382,15 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     }
     else
     {
-        if (getSampleRate() != 0.f)
+        if (getSampleRate() != 0.f && ! currentlyReleasingNote)
         {
             overlap->clear();
             currentlyKillingVoice = true;
             renderNextBlock (*overlap, 0, overlapSize);
             overlapIndex = 0;
         }
+
+        currentlyReleasingNote = false;
 
         clearCurrentNote();
         //activeVoices->erase (voiceId);
@@ -426,6 +428,8 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
     {
         env = adsr.getNextSample();
 
+        //DBG (env);
+
         for (int c = 0; c < numChannels; ++c)
         {
             auto vasd = block.getChannelPointer (c)[i];
@@ -435,7 +439,7 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
 
     if (currentlyReleasingNote && !adsr.isActive())
     {
-        currentlyReleasingNote = false;
+        //currentlyReleasingNote = false;
         //currentlyKillingNote = false;
 #if DEBUG_VOICES
         DBG ("\tDEBUG ENVELOPPE DONE");
