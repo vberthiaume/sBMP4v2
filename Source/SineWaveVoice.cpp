@@ -101,9 +101,9 @@ void GainedOscillator<Type>::setOscShape (int newShape)
 }
 
 
-sBMP4Voice::sBMP4Voice (int vId/*, std::set<int>* activeVoiceSet, std::set<int>* voicesBeingKilledSet*/) :
-voiceId (vId)
-//activeVoices (activeVoiceSet),
+sBMP4Voice::sBMP4Voice (int vId, std::set<int>* activeVoiceSet/*, std::set<int>* voicesBeingKilledSet*/) :
+voiceId (vId),
+activeVoices (activeVoiceSet)
 //voicesBeingKilled (voicesBeingKilledSet)
 {
     processorChain.get<masterGainIndex>().setGainLinear (defaultOscLevel);
@@ -350,7 +350,7 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     adsr.setParameters (curParams);
     adsr.reset();
     adsr.noteOn();
-    //activeVoices->insert (voiceId);
+    activeVoices->insert (voiceId);
 
     pitchWheelPosition = currentPitchWheelPosition;
     updateOscFrequencies();
@@ -382,7 +382,7 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     }
     else
     {
-        if (getSampleRate() != 0.f && ! currentlyReleasingNote)
+        if (getSampleRate() != 0.f && ! justDoneReleaseEnvelope)
         {
             overlap->clear();
             currentlyKillingVoice = true;
@@ -390,7 +390,8 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
             overlapIndex = 0;
         }
 
-        currentlyReleasingNote = false;
+        justDoneReleaseEnvelope = false;
+        //currentlyReleasingNote = false;
 
         clearCurrentNote();
         //activeVoices->erase (voiceId);
@@ -431,15 +432,13 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
         //DBG (env);
 
         for (int c = 0; c < numChannels; ++c)
-        {
-            auto vasd = block.getChannelPointer (c)[i];
             block.getChannelPointer (c)[i] *= env;
-        }
     }
 
     if (currentlyReleasingNote && !adsr.isActive())
     {
-        //currentlyReleasingNote = false;
+        currentlyReleasingNote = false;
+        justDoneReleaseEnvelope = true;
         //currentlyKillingNote = false;
 #if DEBUG_VOICES
         DBG ("\tDEBUG ENVELOPPE DONE");
@@ -566,6 +565,8 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         //DBG ("\tDEBUG stop RAMP");
     }
     //else 
-        //for (int i = startSample; i < startSample + numSamples; ++i)
-        //    DBG (outputBuffer.getSample (0, i));
+    //    for (int i = startSample; i < startSample + numSamples; ++i)
+    //        DBG (outputBuffer.getSample (0, i));
+
+    activeVoices->erase (voiceId);
 }

@@ -19,7 +19,7 @@ public:
     sBMP4Synthesiser()
     {
         for (auto i = 0; i < numVoices; ++i)
-            addVoice (new sBMP4Voice (i/*, &activeVoices, &voicesBeingKilled*/));
+            addVoice (new sBMP4Voice (i, &activeVoices /*&voicesBeingKilled*/));
 
         addSound (new sBMP4Sound());
     }
@@ -82,6 +82,20 @@ public:
     {
         for (auto voice : voices)
             operation (dynamic_cast<sBMP4Voice*> (voice), newValue);
+    }
+
+    void noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) override
+    {
+        {
+            const ScopedLock sl (lock);
+
+            //don't start new voices in current buffer call if we have filled all voices already.
+            //activeVoices should be reset after each renderNextBlock call
+            if (activeVoices.size() >= numVoices)
+                return;
+        }
+
+        Synthesiser::noteOn (midiChannel, midiNoteNumber, velocity);
     }
 
     /*
@@ -204,7 +218,7 @@ private:
 
     //@TODO: make this into a bit mask thing? is there any concurency issues here?
     //@TODO Should I have voices on different threads?
-    //std::set<int> activeVoices{};
+    std::set<int> activeVoices{};
     //std::set<int> voicesBeingKilled{};
 
     dsp::ProcessorChain<dsp::Reverb> fxChain;
