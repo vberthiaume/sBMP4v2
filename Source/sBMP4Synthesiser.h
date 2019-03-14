@@ -26,6 +26,11 @@ public:
 
     void prepare (const dsp::ProcessSpec& spec) noexcept
     {
+        if (Helpers::areSameSpecs (curSpecs, spec))
+            return;
+
+        curSpecs = spec;
+
         setCurrentPlaybackSampleRate (spec.sampleRate);
 
         for (auto* v : voices)
@@ -222,4 +227,6 @@ private:
     //std::set<int> voicesBeingKilled{};
 
     dsp::ProcessorChain<dsp::Reverb> fxChain;
+
+    dsp::ProcessSpec curSpecs{};
 };

@@ -20,6 +20,10 @@
     #define DEBUG_VOICES 0
 #endif
 
+#ifndef PRINT_ALL_SAMPLES
+    #define PRINT_ALL_SAMPLES 0
+#endif
+
 namespace Constants
 {
     enum
@@ -35,7 +39,7 @@ namespace Constants
         defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
         middleCMidiNote = 60,       //C3 on rev2
 
-        overlapSize = 528
+        overlapSize = 300
     };
 
     static const auto defaultOscLevel = .4f;
@@ -212,6 +216,13 @@ struct Helpers
     static bool valueContainedInRange (Type value, NormalisableRange<Type> range)
     {
         return value >= range.start && value <= range.end;
+    }
+
+    inline static bool areSameSpecs (const dsp::ProcessSpec& spec1, const dsp::ProcessSpec& spec2)
+    {
+        return spec1.maximumBlockSize == spec2.maximumBlockSize
+            && spec1.numChannels == spec2.numChannels
+            && spec1.sampleRate == spec2.sampleRate;
     }
 };
 

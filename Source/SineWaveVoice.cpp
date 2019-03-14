@@ -384,7 +384,7 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     {
         if (getSampleRate() != 0.f && ! justDoneReleaseEnvelope)
         {
-            overlap->clear();
+            /*overlap->clear();*/
             currentlyKillingVoice = true;
             renderNextBlock (*overlap, 0, overlapSize);
             overlapIndex = 0;
@@ -506,8 +506,9 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
         if (overlapIndex > -1)
         {
-            /*DBG ("\tDEBUG ADD OVERLAP" + String (overlapIndex));*/
-
+#if DEBUG_VOICES
+            DBG ("\tDEBUG ADD OVERLAP" + String (overlapIndex));
+#endif
             auto curSamples = jmin (overlapSize - overlapIndex, (int) curBlockSize);
 
             for (int c = 0; c < block2.getNumChannels(); ++c)
@@ -520,10 +521,10 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
                     jassert (total > -1 && total < 1);
 
                     block2.setSample (c, i, total);
-
-                    //if (c == 0)
-                    //    DBG ("ADD\t" + String (overl));
-                        /*DBG ("ADD\t" + String (prev) + "\t" + String (overl) + "\t" +  String (total));*/
+#if DEBUG_VOICES
+                    if (c == 0)
+                        DBG ("\tADD\t" + String (prev) + "\t" + String (overl) + "\t" + String (total));
+#endif
                 }
 
             overlapIndex += curSamples;
@@ -531,7 +532,10 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
             if (overlapIndex >= overlapSize)
             {
                 overlapIndex = -1;
-                //DBG ("\tDEBUG OVERLAP DONE");
+                overlap->clear();
+#if DEBUG_VOICES
+                DBG ("\tDEBUG OVERLAP DONE");
+#endif
             }
         }
 
@@ -558,15 +562,18 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
                 auto asdf = outputBuffer.getSample (c, i);
                 jassert (asdf > -1 && asdf < 1);
             }
-
-        //DBG ("\tDEBUG START RAMP");
-        //for (int i = 0; i < outputBuffer.getNumSamples(); ++i)
-        //    DBG ("BUILDING RAMP\t" + String (outputBuffer.getSample (0, i)));
-        //DBG ("\tDEBUG stop RAMP");
+#if DEBUG_VOICES
+        DBG ("\tDEBUG START RAMP");
+        for (int i = 0; i < outputBuffer.getNumSamples(); ++i)
+            DBG ("\tBUILDING RAMP\t" + String (outputBuffer.getSample (0, i)));
+        DBG ("\tDEBUG stop RAMP");
+#endif
     }
-    //else 
-    //    for (int i = startSample; i < startSample + numSamples; ++i)
-    //        DBG (outputBuffer.getSample (0, i));
+#if PRINT_ALL_SAMPLES
+    else 
+        for (int i = startSample; i < startSample + numSamples; ++i)
+            DBG (outputBuffer.getSample (0, i));
+#endif
 
     activeVoices->erase (voiceId);
 }

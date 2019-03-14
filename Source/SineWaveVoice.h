@@ -294,5 +294,5 @@ private:
 
     bool rampingUp = false;
     int curRampSample = 0, rampSamplesLeft = 0;
-    float lastRampValue = 0.f;
+    float lastRampValue = 0.f;    
 };
