@@ -34,7 +34,7 @@ namespace Constants
         defaultOscMix = 0,
         defaultOscTuning = 0,
 
-        numVoices = 16,
+        numVoices = 1,
         defaultOscMidiNote = 48,    //C2 on rev2
         middleCMidiNote = 60,       //C3 on rev2
 
