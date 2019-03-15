@@ -11,11 +11,6 @@
 #include "SineWaveVoice.h"
 #include "ButtonGroupComponent.h"
 
-enum
-{
-    rampLenghtSamples = 100
-};
-
 template <typename Type>
 void GainedOscillator<Type>::setOscShape (int newShape)
 {
@@ -384,6 +379,10 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     {
         if (getSampleRate() != 0.f && ! justDoneReleaseEnvelope)
         {
+            rampingUp = false;
+            lastRampValue = 0;
+            rampSamplesLeft = rampLenghtSamples;
+
             overlap->clear();
             activeVoices->insert (voiceId);
             currentlyKillingVoice = true;
@@ -488,8 +487,16 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
         if (rampingUp)
         {
+#if DEBUG_VOICES
+            DBG ("\tDEBUG RAMP UP " + String (rampLenghtSamples - rampSamplesLeft));
+#endif
+#if 0
+            jassert (lastRampValue >= 0.f && lastRampValue <= 1.f);
+
             auto curRampLenght = jmin ((int) curBlockSize, rampSamplesLeft);
             auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
+
+            jassert (nextRampValue >= 0.f && nextRampValue <= 1.f);
 
             for (int c = 0; c < block2.getNumChannels(); ++c)
             {
@@ -504,9 +511,36 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
             lastRampValue = nextRampValue;
             rampSamplesLeft = rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
+#else
+            jassert (lastRampValue >= 0.f && lastRampValue <= 1.f);
 
-            if (lastRampValue >= 1.f)
+            auto curRampLenght = jmin ((int) curBlockSize, rampSamplesLeft);
+            auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
+
+            jassert (nextRampValue >= 0.f && nextRampValue <= 1.f);
+
+            for (int c = 0; c < block2.getNumChannels(); ++c)
+            {
+                for (int i = 0; i < curRampLenght; ++i)
+                {
+                    auto value = block2.getSample (c, i);
+                    auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
+
+                    block2.setSample (c, i, value * ramp);
+                }
+            }
+
+            lastRampValue = nextRampValue;
+            rampSamplesLeft -= curRampLenght;//= rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
+
+#endif
+            if (rampSamplesLeft <= 0)
+            {
                 rampingUp = false;
+#if DEBUG_VOICES
+                DBG ("\tDEBUG RAMP UP DONE");
+#endif
+            }
         }
 
         if (overlapIndex > -1)
@@ -563,22 +597,56 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         currentlyKillingVoice = false;
 
         for (int c = 0; c < outputBuffer.getNumChannels(); ++c)
-            for (int i = 0; i < outputBuffer.getNumSamples(); ++i)
+        {
+            for (int i = startSample; i < startSample + numSamples; ++i)
             {
                 auto asdf = outputBuffer.getSample (c, i);
                 jassert (asdf > -1 && asdf < 1);
             }
+        }
+
 #if PRINT_ALL_SAMPLES
         DBG ("\tDEBUG START RAMP");
-        for (int i = 0; i < outputBuffer.getNumSamples(); ++i)
-            DBG ("\tBUILDING RAMP\t" + String (outputBuffer.getSample (0, i)));
+        auto prev = abs (outputBuffer.getSample (0, startSample));
+        auto prevDiff = abs (outputBuffer.getSample (0, startSample + 1)) - prev;
+
+        for (int i = startSample; i < startSample + numSamples; ++i)
+        {
+            auto cur = abs (outputBuffer.getSample (0, i));
+            DBG ("\tBUILDING RAMP\t" + String (cur));
+
+            auto curDiff = abs (cur - prev);
+
+            if (abs (curDiff - prevDiff) > .05)
+            {
+                int j = 0;
+            }
+            prev = cur;
+            prevDiff = curDiff;
+        }
+
         DBG ("\tDEBUG stop RAMP");
 #endif
     }
 #if PRINT_ALL_SAMPLES
-    else 
+    else
+    {
+        auto prev = abs (outputBuffer.getSample (0, startSample));
+        auto prevDiff = abs (outputBuffer.getSample (0, startSample + 1)) - prev;
         for (int i = startSample; i < startSample + numSamples; ++i)
+        {
             DBG (outputBuffer.getSample (0, i));
+            auto cur = abs (outputBuffer.getSample (0, i));
+            auto curDiff = abs (cur - prev);
+
+            if (cur - prev > .05f && abs (curDiff - prevDiff) > .05f)
+            {
+                int j = 0;
+            }
+            prev = cur;
+            prevDiff = curDiff;
+        }
+    }
 #endif
 
     /*activeVoices->erase (voiceId);*/
