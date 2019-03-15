@@ -96,10 +96,9 @@ void GainedOscillator<Type>::setOscShape (int newShape)
 }
 
 
-sBMP4Voice::sBMP4Voice (int vId, std::set<int>* activeVoiceSet/*, std::set<int>* voicesBeingKilledSet*/) :
+sBMP4Voice::sBMP4Voice (int vId, std::set<int>* activeVoiceSet) :
 voiceId (vId),
-activeVoices (activeVoiceSet)
-//voicesBeingKilled (voicesBeingKilledSet)
+voicesBeingKilled (activeVoiceSet)
 {
     processorChain.get<masterGainIndex>().setGainLinear (defaultOscLevel);
     processorChain.get<filterIndex>().setCutoffFrequencyHz (defaultFilterCutoff);
@@ -128,7 +127,7 @@ void sBMP4Voice::prepare (const dsp::ProcessSpec& spec)
     osc1Block = dsp::AudioBlock<float> (heapBlock1, spec.numChannels, spec.maximumBlockSize);
     osc2Block = dsp::AudioBlock<float> (heapBlock2, spec.numChannels, spec.maximumBlockSize);
 
-    overlap = std::make_unique<AudioSampleBuffer> (AudioSampleBuffer (spec.numChannels, overlapSize));
+    overlap = std::make_unique<AudioSampleBuffer> (AudioSampleBuffer (spec.numChannels, killRampSamples));
     overlap->clear();
 
     sub.prepare (spec);
@@ -345,7 +344,6 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     adsr.setParameters (curParams);
     adsr.reset();
     adsr.noteOn();
-    /*activeVoices->insert (voiceId);*/
 
     pitchWheelPosition = currentPitchWheelPosition;
     updateOscFrequencies();
@@ -353,8 +351,8 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     curVelocity = velocity;
 
     rampingUp = true;
-    lastRampValue = 0;
-    rampSamplesLeft = rampLenghtSamples;
+    rampUpLastValue = 0;
+    rampUpSamplesLeft = rampUpSamples;
 
     updateOscLevels();
 }
@@ -380,44 +378,21 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
         if (getSampleRate() != 0.f && ! justDoneReleaseEnvelope)
         {
             rampingUp = false;
-            lastRampValue = 0;
-            rampSamplesLeft = rampLenghtSamples;
+            rampUpLastValue = 0;
+            rampUpSamplesLeft = rampUpSamples;
 
             overlap->clear();
-            activeVoices->insert (voiceId);
+            voicesBeingKilled->insert (voiceId);
             currentlyKillingVoice = true;
-            renderNextBlock (*overlap, 0, overlapSize);
+            renderNextBlock (*overlap, 0, killRampSamples);
             overlapIndex = 0;
         }
 
         justDoneReleaseEnvelope = false;
-        //currentlyReleasingNote = false;
 
         clearCurrentNote();
-        //activeVoices->erase (voiceId);
-        //voicesBeingKilled->erase (voiceId);
     }
 }
-
-//void sBMP4Voice::killNote()
-//{
-//#if DEBUG_VOICES
-//    DBG ("kill: " + String (voiceId));
-//#endif
-//
-//    if (! currentlyKillingNote)
-//    {
-//        auto paramCopy = curParams;
-//        paramCopy.release = killR;
-//        adsr.setParameters (paramCopy);
-//        adsr.noteOff();
-//
-//        //voicesBeingKilled->insert (voiceId);
-//        currentlyKillingNote = true;
-//    }
-//
-//    currentlyReleasingNote = true;
-//}
 
 void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
 {
@@ -429,8 +404,6 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
     {
         env = adsr.getNextSample();
 
-        //DBG (env);
-
         for (int c = 0; c < numChannels; ++c)
             block.getChannelPointer (c)[i] *= env;
     }
@@ -439,15 +412,11 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
     {
         currentlyReleasingNote = false;
         justDoneReleaseEnvelope = true;
+        stopNote (0.f, false);
 
-        //this is the normal way 
-        //activeVoices->erase (voiceId);
-
-        //currentlyKillingNote = false;
 #if DEBUG_VOICES
         DBG ("\tDEBUG ENVELOPPE DONE");
 #endif
-        stopNote (0.f, false);
     }
 }
 
@@ -488,13 +457,10 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         if (rampingUp)
         {
 #if DEBUG_VOICES
-            DBG ("\tDEBUG RAMP UP " + String (rampLenghtSamples - rampSamplesLeft));
+            DBG ("\tDEBUG RAMP UP " + String (rampUpSamples - rampUpSamplesLeft));
 #endif
-#if 0
-            jassert (lastRampValue >= 0.f && lastRampValue <= 1.f);
-
-            auto curRampLenght = jmin ((int) curBlockSize, rampSamplesLeft);
-            auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
+            auto curRampLenght = jmin ((int) curBlockSize, rampUpSamplesLeft);
+            auto nextRampValue = rampUpLastValue + (float) curRampLenght / rampUpSamples;
 
             jassert (nextRampValue >= 0.f && nextRampValue <= 1.f);
 
@@ -503,38 +469,16 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
                 for (int i = 0; i < curRampLenght; ++i)
                 {
                     auto value = block2.getSample (c, i);
-                    auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
+                    auto ramp = rampUpLastValue + i * (nextRampValue - rampUpLastValue) / (curRampLenght);
 
                     block2.setSample (c, i, value * ramp);
                 }
             }
 
-            lastRampValue = nextRampValue;
-            rampSamplesLeft = rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
-#else
-            jassert (lastRampValue >= 0.f && lastRampValue <= 1.f);
+            rampUpLastValue = nextRampValue;
+            rampUpSamplesLeft -= curRampLenght;
 
-            auto curRampLenght = jmin ((int) curBlockSize, rampSamplesLeft);
-            auto nextRampValue = lastRampValue + (float) curRampLenght / rampLenghtSamples;
-
-            jassert (nextRampValue >= 0.f && nextRampValue <= 1.f);
-
-            for (int c = 0; c < block2.getNumChannels(); ++c)
-            {
-                for (int i = 0; i < curRampLenght; ++i)
-                {
-                    auto value = block2.getSample (c, i);
-                    auto ramp = lastRampValue + i * (nextRampValue - lastRampValue) / (curRampLenght);
-
-                    block2.setSample (c, i, value * ramp);
-                }
-            }
-
-            lastRampValue = nextRampValue;
-            rampSamplesLeft -= curRampLenght;//= rampSamplesLeft - (curBlockSize - pos) < 0 ? rampSamplesLeft : rampSamplesLeft - (curBlockSize - pos);
-
-#endif
-            if (rampSamplesLeft <= 0)
+            if (rampUpSamplesLeft <= 0)
             {
                 rampingUp = false;
 #if DEBUG_VOICES
@@ -548,7 +492,7 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 #if DEBUG_VOICES
             DBG ("\tDEBUG ADD OVERLAP" + String (overlapIndex));
 #endif
-            auto curSamples = jmin (overlapSize - overlapIndex, (int) curBlockSize);
+            auto curSamples = jmin (killRampSamples - overlapIndex, (int) curBlockSize);
 
             for (int c = 0; c < block2.getNumChannels(); ++c)
                 for (int i = 0; i < curSamples; ++i)
@@ -568,11 +512,11 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
 
             overlapIndex += curSamples;
 
-            if (overlapIndex >= overlapSize)
+            if (overlapIndex >= killRampSamples)
             {
                 overlapIndex = -1;
                 //overlap->clear();
-                activeVoices->erase (voiceId);
+                voicesBeingKilled->erase (voiceId);
 #if DEBUG_VOICES
                 DBG ("\tDEBUG OVERLAP DONE");
 #endif
@@ -649,5 +593,5 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
     }
 #endif
 
-    /*activeVoices->erase (voiceId);*/
+    /*voicesBeingKilled->erase (voiceId);*/
 }

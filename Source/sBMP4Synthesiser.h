@@ -19,7 +19,7 @@ public:
     sBMP4Synthesiser()
     {
         for (auto i = 0; i < numVoices; ++i)
-            addVoice (new sBMP4Voice (i, &activeVoices /*&voicesBeingKilled*/));
+            addVoice (new sBMP4Voice (i, &voicesBeingKilled));
 
         addSound (new sBMP4Sound());
     }
@@ -95,124 +95,13 @@ public:
             const ScopedLock sl (lock);
 
             //don't start new voices in current buffer call if we have filled all voices already.
-            //activeVoices should be reset after each renderNextBlock call
-            if (activeVoices.size() >= numVoices)
+            //voicesBeingKilled should be reset after each renderNextBlock call
+            if (voicesBeingKilled.size() >= numVoices)
                 return;
         }
 
         Synthesiser::noteOn (midiChannel, midiNoteNumber, velocity);
     }
-
-    /*
-    void noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) override
-    {
-        //we have too many voices being played, just forget about this one
-        if (voicesBeingKilled.size() >= numVoicesSoft)
-            return;
-
-        {
-            const ScopedLock sl (lock);
-
-            auto numVoicesToKill = (int) activeVoices.size() - (int) voicesBeingKilled.size() - numVoicesSoft;
-
-            while (numVoicesToKill-- > 0)
-                if (auto voice = dynamic_cast<sBMP4Voice*> (findFreeVoiceOrSteal (*sounds.begin(), midiChannel, midiNoteNumber)))
-                    voice->killNote();
-        }
-
-        //only start new voices if we have room
-        if (activeVoices.size() < numVoices)
-            Synthesiser::noteOn (midiChannel, midiNoteNumber, velocity);
-        //else
-        //    jassertfalse;
-    }
-
-    SynthesiserVoice* findFreeVoiceOrSteal (SynthesiserSound* soundToPlay, int , int midiNoteNumber) const
-    {
-        // This voice-stealing algorithm applies the following heuristics:
-        // - Re-use the oldest notes first
-        // - Protect the lowest & topmost notes, even if sustained, but not if they've been released.
-
-        // apparently you are trying to render audio without having any voices...
-        jassert (! voices.isEmpty());
-
-        // These are the voices we want to protect (ie: only steal if unavoidable)
-        SynthesiserVoice* low = nullptr; // Lowest sounding note, might be sustained, but NOT in release phase
-        SynthesiserVoice* top = nullptr; // Highest sounding note, might be sustained, but NOT in release phase
-
-        // this is a list of voices we can steal, sorted by how long they've been running
-        Array<SynthesiserVoice*> usableVoices;
-        usableVoices.ensureStorageAllocated (voices.size());
-
-        //@TODO so we only ever try to kill voices in the soft range... is that a problem?
-        for (int i = 0; i < numVoices; ++i)
-        {
-            auto voice = dynamic_cast<sBMP4Voice*> (voices[i]);
-            if (voice->canPlaySound (soundToPlay))
-            {
-                //do not try to steal/kill this voice if it is currently being killed
-                if (voicesBeingKilled.find (voice->getVoiceId()) != voicesBeingKilled.end())
-                    continue;
-
-                usableVoices.add (voice);
-
-                // NB: Using a functor rather than a lambda here due to scare-stories about
-                // compilers generating code containing heap allocations..
-                struct Sorter
-                {
-                    bool operator() (const SynthesiserVoice* a, const SynthesiserVoice* b) const noexcept { return a->wasStartedBefore (*b); }
-                };
-
-                std::sort (usableVoices.begin(), usableVoices.end(), Sorter());
-
-                if (! voice->isPlayingButReleased()) // Don't protect released notes
-                {
-                    auto note = voice->getCurrentlyPlayingNote();
-
-                    if (low == nullptr || note < low->getCurrentlyPlayingNote())
-                        low = voice;
-
-                    if (top == nullptr || note > top->getCurrentlyPlayingNote())
-                        top = voice;
-                }
-            }
-        }
-
-        // Eliminate pathological cases (ie: only 1 note playing): we always give precedence to the lowest note(s)
-        if (top == low)
-            top = nullptr;
-
-        // The oldest note that's playing with the target pitch is ideal..
-        for (auto* voice : usableVoices)
-            if (voice->getCurrentlyPlayingNote() == midiNoteNumber)
-                return voice;
-
-        // Oldest voice that has been released (no finger on it and not held by sustain pedal)
-        for (auto* voice : usableVoices)
-            if (voice != low && voice != top && voice->isPlayingButReleased())
-                return voice;
-
-        // Oldest voice that doesn't have a finger on it:
-        for (auto* voice : usableVoices)
-            if (voice != low && voice != top && ! voice->isKeyDown())
-                return voice;
-
-        // Oldest voice that isn't protected
-        for (auto* voice : usableVoices)
-            if (voice != low && voice != top)
-                return voice;
-
-        // We've only got "protected" voices now: lowest note takes priority
-        jassert (low != nullptr);
-
-        // Duophonic synth: give priority to the bass note:
-        if (top != nullptr)
-            return top;
-
-        return low;
-    }
-
-    */
 
 private:
 
@@ -221,10 +110,8 @@ private:
         reverbIndex
     };
 
-    //@TODO: make this into a bit mask thing? is there any concurency issues here?
-    //@TODO Should I have voices on different threads?
-    std::set<int> activeVoices{};
-    //std::set<int> voicesBeingKilled{};
+    //@TODO: make this into a bit mask thing?
+    std::set<int> voicesBeingKilled{};
 
     dsp::ProcessorChain<dsp::Reverb> fxChain;
 

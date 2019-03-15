@@ -35,12 +35,11 @@ namespace Constants
         defaultOscTuning = 0,
 
         numVoices = 16,
-        //numVoicesSoft = 1,
         defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
         middleCMidiNote = 60,       //C3 on rev2
 
-        overlapSize = 300,
-        rampLenghtSamples = 100
+        killRampSamples = 300,
+        rampUpSamples = 100
     };
 
     static const auto defaultOscLevel = .4f;

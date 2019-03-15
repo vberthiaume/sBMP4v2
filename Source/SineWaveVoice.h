@@ -15,8 +15,6 @@
 #include <set>
 #include "ButtonGroupComponent.h"
 
-
-
 struct sBMP4Sound : public SynthesiserSound
 {
     sBMP4Sound() {}
@@ -112,7 +110,7 @@ public:
         osc2Index,
     };
 
-    sBMP4Voice (int voiceId, std::set<int>* activeVoiceSet/*, std::set<int>* voicesBeingKilledSet*/);
+    sBMP4Voice (int voiceId, std::set<int>* activeVoiceSet);
 
     void prepare (const dsp::ProcessSpec& spec);
 
@@ -239,8 +237,7 @@ private:
     void updateLfo();
     void processEnvelope (dsp::AudioBlock<float>& block2);
 
-    std::set<int>* activeVoices;
-    //std::set<int>* voicesBeingKilled;
+    std::set<int>* voicesBeingKilled;
 
     HeapBlock<char> heapBlock1, heapBlock2;
     dsp::AudioBlock<float> osc1Block, osc2Block;
@@ -293,6 +290,6 @@ private:
     float oscMix = 0.f;
 
     bool rampingUp = false;
-    int curRampSample = 0, rampSamplesLeft = 0;
-    float lastRampValue = 0.f;    
+    int rampUpSamplesLeft = 0;
+    float rampUpLastValue = 0.f;    
 };
