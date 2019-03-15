@@ -420,6 +420,37 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
     }
 }
 
+void sBMP4Voice::processRampUp (dsp::AudioBlock<float>& block, int curBlockSize)
+{
+#if DEBUG_VOICES
+    DBG ("\tDEBUG RAMP UP " + String (rampUpSamples - rampUpSamplesLeft));
+#endif
+    auto curRampUpLenght = jmin ((int) curBlockSize, rampUpSamplesLeft);
+    auto nextRampUpValue = rampUpLastValue + (float) curRampUpLenght / rampUpSamples;
+    jassert (nextRampUpValue >= 0.f && nextRampUpValue <= 1.f);
+
+    for (int c = 0; c < block.getNumChannels(); ++c)
+    {
+        for (int i = 0; i < curRampUpLenght; ++i)
+        {
+            auto value = block.getSample (c, i);
+            auto ramp = rampUpLastValue + i * (nextRampUpValue - rampUpLastValue) / (curRampUpLenght);
+            block.setSample (c, i, value * ramp);
+        }
+    }
+
+    rampUpLastValue = nextRampUpValue;
+    rampUpSamplesLeft -= curRampUpLenght;
+
+    if (rampUpSamplesLeft <= 0)
+    {
+        rampingUp = false;
+#if DEBUG_VOICES
+        DBG ("\tDEBUG RAMP UP DONE");
+#endif
+    }
+}
+
 void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
 {
     if (! currentlyKillingVoice && ! isVoiceActive())
@@ -455,37 +486,7 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         processEnvelope (block2);
 
         if (rampingUp)
-        {
-#if DEBUG_VOICES
-            DBG ("\tDEBUG RAMP UP " + String (rampUpSamples - rampUpSamplesLeft));
-#endif
-            auto curRampLenght = jmin ((int) curBlockSize, rampUpSamplesLeft);
-            auto nextRampValue = rampUpLastValue + (float) curRampLenght / rampUpSamples;
-
-            jassert (nextRampValue >= 0.f && nextRampValue <= 1.f);
-
-            for (int c = 0; c < block2.getNumChannels(); ++c)
-            {
-                for (int i = 0; i < curRampLenght; ++i)
-                {
-                    auto value = block2.getSample (c, i);
-                    auto ramp = rampUpLastValue + i * (nextRampValue - rampUpLastValue) / (curRampLenght);
-
-                    block2.setSample (c, i, value * ramp);
-                }
-            }
-
-            rampUpLastValue = nextRampValue;
-            rampUpSamplesLeft -= curRampLenght;
-
-            if (rampUpSamplesLeft <= 0)
-            {
-                rampingUp = false;
-#if DEBUG_VOICES
-                DBG ("\tDEBUG RAMP UP DONE");
-#endif
-            }
-        }
+            processRampUp (block2, curBlockSize);
 
         if (overlapIndex > -1)
         {

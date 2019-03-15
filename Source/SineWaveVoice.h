@@ -235,7 +235,8 @@ private:
     int voiceId;
 
     void updateLfo();
-    void processEnvelope (dsp::AudioBlock<float>& block2);
+    void processEnvelope (dsp::AudioBlock<float>& block);
+    void processRampUp (dsp::AudioBlock<float>& block, int curBlockSize);
 
     std::set<int>* voicesBeingKilled;
 
