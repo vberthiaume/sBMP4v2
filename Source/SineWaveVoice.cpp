@@ -266,6 +266,9 @@ void sBMP4Voice::pitchWheelMoved (int newPitchWheelValue)
 //@TODO For now, all lfos oscillate between [0, 1], even though the random one (an only that one) should oscilate between [-1, 1]
 void sBMP4Voice::updateLfo()
 {
+    curFilterCutoff *= env > 0.1f ? env : 0.1f;
+    processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff);
+    
     float lfoOut;
     {
         std::lock_guard<std::mutex> lock (lfoMutex);
@@ -358,15 +361,15 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
 void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
 {
     auto samples = block.getNumSamples();
-    auto numChannels = block.getNumChannels();
+//    auto numChannels = block.getNumChannels();
 
-    float env{};
+//    float env{};
     for (auto i = 0; i < samples; ++i)
     {
         env = adsr.getNextSample();
 
-        for (int c = 0; c < numChannels; ++c)
-            block.getChannelPointer (c)[i] *= env;
+//        for (int c = 0; c < numChannels; ++c)
+//            block.getChannelPointer (c)[i] *= env;
     }
 
     if (currentlyReleasingNote && !adsr.isActive())
