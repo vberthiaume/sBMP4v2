@@ -15,7 +15,7 @@ public:
         tolerance (snapTolerance)
     {
         setLookAndFeel (&lf);
-        setPopupDisplayEnabled (true, false, nullptr);
+        //setPopupDisplayEnabled (true, false, nullptr);
     }
 
     ~SnappingSlider()

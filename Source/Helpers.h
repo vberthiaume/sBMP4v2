@@ -35,7 +35,7 @@ namespace Constants
         defaultOscTuning = 0,
 
         numVoices = 16,
-        defaultOscMidiNote = 48,    //C2 on rev2, used to be 36 for some reason
+        defaultOscMidiNote = 48,    //C2 on rev2
         middleCMidiNote = 60,       //C3 on rev2
 
         killRampSamples = 300,
@@ -47,11 +47,6 @@ namespace Constants
     static const auto defaultFilterCutoff = 1000.f;
     static const auto defaultFilterResonance = .5f;
 
-    static const auto defaultAmpA = .1f;
-    static const auto defaultAmpD = .1f;
-    static const auto defaultAmpS = 1.f;
-    static const auto defaultAmpR = .25f;
-
     static const float defaultLfoFreq = 3.f;
     static const float defaultLfoAmount = 0.f;
 
@@ -61,22 +56,21 @@ namespace Constants
     static const NormalisableRange<float> sliderRange = {0.f, 1.f};
     static const NormalisableRange<float> centeredSliderRange = {-0.5f, .5f};
 
-    //envelope ranges
-    static const auto min = .01f;
-    static const auto minA = min; /*std::numeric_limits<float>::epsilon()*/
-    static const auto minD = min;
-    static const auto minR = min;
-    static const auto minS = min;
-    static const auto killR = .006f;
+    //envelope stuff
+    static const auto minAmp = .01f;
+    static const auto defaultAmpA = minAmp;
+    static const auto defaultAmpD = minAmp;
+    static const auto defaultAmpS = minAmp;
+    static const auto defaultAmpR = .25f;
 
     static const auto sustainSkewFactor = .5f;
     static const auto ampSkewFactor = .5f;
     static const auto cutOffSkewFactor = .5f;
 
-    static const NormalisableRange<float> attackRange = {minA, 25.f, 0.f, ampSkewFactor};
-    static const NormalisableRange<float> decayRange = {minD, 25.f, 0.f, ampSkewFactor};
-    static const NormalisableRange<float> sustainRange = {minS, 1.f, 0.f, sustainSkewFactor};
-    static const NormalisableRange<float> releaseRange = {minR, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> attackRange   = {minAmp, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> decayRange    = {minAmp, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> sustainRange  = {minAmp, 1.f,  0.f, sustainSkewFactor};
+    static const NormalisableRange<float> releaseRange  = {minAmp, 25.f, 0.f, ampSkewFactor};
 
     static const NormalisableRange<float> cutOffRange = {0.1f, 18000.f, 0.f, cutOffSkewFactor};
     static const NormalisableRange<float> lfoRange = {0.1f, 10.f};

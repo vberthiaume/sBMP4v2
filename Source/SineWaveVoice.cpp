@@ -112,16 +112,6 @@ voicesBeingKilled (activeVoiceSet)
     lfo.setFrequency (defaultLfoFreq);
 }
 
-#if RAMP_ADSR
-void sBMP4Voice::updateNextParams()
-{
-    nextAttack  = curParams.attack;
-    nextDecay   = curParams.decay;
-    nextSustain = curParams.sustain;
-    nextRelease = curParams.release;
-}
-#endif
-
 void sBMP4Voice::prepare (const dsp::ProcessSpec& spec)
 {
     osc1Block = dsp::AudioBlock<float> (heapBlock1, spec.numChannels, spec.maximumBlockSize);
@@ -136,9 +126,6 @@ void sBMP4Voice::prepare (const dsp::ProcessSpec& spec)
     processorChain.prepare (spec);
 
     adsr.setSampleRate (spec.sampleRate);
-#if RAMP_ADSR
-    updateNextParams();
-#endif
     adsr.setParameters (curParams);
 
     lfo.prepare ({spec.sampleRate / lfoUpdateRate, spec.maximumBlockSize, spec.numChannels});
@@ -169,28 +156,6 @@ void sBMP4Voice::setAmpParam (StringRef parameterID, float newValue)
         newValue = std::numeric_limits<float>::epsilon();
     }
 
-#if RAMP_ADSR
-
-    if (parameterID == sBMP4AudioProcessorIDs::ampAttackID)
-        nextAttack = newValue;
-    else if (parameterID == sBMP4AudioProcessorIDs::ampDecayID)
-        nextDecay = newValue;
-    else if (parameterID == sBMP4AudioProcessorIDs::ampSustainID)
-        nextSustain = newValue;
-    else if (parameterID == sBMP4AudioProcessorIDs::ampReleaseID)
-        nextRelease = newValue;
-
-    if (! adsr.isActive())
-    {
-        curParams.attack = nextAttack;
-        curParams.decay = nextDecay;
-        curParams.sustain = nextSustain;
-        curParams.release = nextRelease;
-
-        adsr.setParameters (curParams);
-    }
-#else
-
     if (parameterID == sBMP4AudioProcessorIDs::ampAttackID)
         curParams.attack = newValue;
     else if (parameterID == sBMP4AudioProcessorIDs::ampDecayID)
@@ -201,8 +166,6 @@ void sBMP4Voice::setAmpParam (StringRef parameterID, float newValue)
         curParams.release = newValue;
 
     adsr.setParameters (curParams);
-
-#endif
 }
 
 //@TODO For now, all lfos oscillate between [0, 1], even though the random one (an only that one) should oscilate between [-1, 1]
@@ -228,15 +191,18 @@ void sBMP4Voice::setLfoShape (int shape)
         }
             break;
 
-        //case LfoShape::revSaw:
-        //{
-        //    std::lock_guard<std::mutex> lock (lfoMutex);
-        //    lfo.initialise ([](float x)
-        //    {
-        //        return (float) jmap (x, -MathConstants<float>::pi, MathConstants<float>::pi, 1.f, 0.f);
-        //    }, 2);
-        //}
-        //    break;
+        //@TODO add this once we have more room in the UI for lfo destinations
+        /*
+        case LfoShape::revSaw:
+        {
+            std::lock_guard<std::mutex> lock (lfoMutex);
+            lfo.initialise ([](float x)
+            {
+                return (float) jmap (x, -MathConstants<float>::pi, MathConstants<float>::pi, 1.f, 0.f);
+            }, 2);
+        }
+            break;
+        */
 
         case LfoShape::square:
         {
@@ -358,24 +324,20 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
 
 void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
 {
-#if DEBUG_VOICES
-    if (allowTailOff)
-        DBG ("\tDEBUG tailoff voice: " + String (voiceId));
-    else
-        DBG ("\tDEBUG kill voice: " + String (voiceId));
-#endif
-
     if (allowTailOff)
     {
         currentlyReleasingNote = true;
         adsr.noteOff();
+
+#if DEBUG_VOICES
+        DBG ("\tDEBUG tailoff voice: " + String (voiceId));
+#endif
     }
     else
     {
         if (getSampleRate() != 0.f && ! justDoneReleaseEnvelope)
         {
             rampingUp = false;
-            rampUpSamplesLeft = rampUpSamples;
 
             overlap->clear();
             voicesBeingKilled->insert (voiceId);
@@ -386,6 +348,10 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
 
         justDoneReleaseEnvelope = false;
         clearCurrentNote();
+
+#if DEBUG_VOICES
+        DBG ("\tDEBUG kill voice: " + String (voiceId));
+#endif
     }
 }
 
@@ -457,6 +423,7 @@ void sBMP4Voice::processKillOverlap (dsp::AudioBlock<float>& block, int curBlock
     auto curSamples = jmin (killRampSamples - overlapIndex, (int) curBlockSize);
 
     for (int c = 0; c < block.getNumChannels(); ++c)
+    {
         for (int i = 0; i < curSamples; ++i)
         {
             auto prev = block.getSample (c, i);
@@ -472,6 +439,7 @@ void sBMP4Voice::processKillOverlap (dsp::AudioBlock<float>& block, int curBlock
                 DBG ("\tADD\t" + String (prev) + "\t" + String (overl) + "\t" + String (total));
 #endif
         }
+    }
 
     overlapIndex += curSamples;
 
@@ -564,10 +532,10 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
         processEnvelope (block2);
 
         if (rampingUp)
-            processRampUp (block2, curBlockSize);
+            processRampUp (block2, (int) curBlockSize);
 
         if (overlapIndex > -1)
-            processKillOverlap (block2, curBlockSize);
+            processKillOverlap (block2, (int) curBlockSize);
 
         pos += curBlockSize;
         lfoUpdateCounter -= curBlockSize;

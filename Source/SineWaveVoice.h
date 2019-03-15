@@ -227,10 +227,6 @@ public:
 
     int getVoiceId() { return voiceId; }
 
-#if RAMP_ADSR
-    void updateNextParams();
-#endif
-
 private:
     int voiceId;
 
@@ -241,7 +237,7 @@ private:
     void applyKillRamp (AudioBuffer<float>& outputBuffer, int startSample, int numSamples);
     void assertForDiscontinuities (AudioBuffer<float>& outputBuffer, int startSample, int numSamples, String dbgPrefix);
 
-    std::set<int>* voicesBeingKilled;
+    
 
     HeapBlock<char> heapBlock1, heapBlock2;
     dsp::AudioBlock<float> osc1Block, osc2Block;
@@ -249,18 +245,14 @@ private:
 
     std::unique_ptr<AudioBuffer<float>> overlap;
     int overlapIndex = -1;
+    //@TODO replace this currentlyKillingVoice bool with a check in the bitfield that voicesBeingKilled will become
     bool currentlyKillingVoice = false;
+    std::set<int>* voicesBeingKilled;
 
     dsp::ProcessorChain<dsp::LadderFilter<float>, dsp::Gain<float>> processorChain;
 
     ADSR adsr;
     ADSR::Parameters curParams;
-#if RAMP_ADSR
-    float nextAttack = defaultAmpA;
-    float nextDecay = defaultAmpD;
-    float nextSustain = defaultAmpS;
-    float nextRelease = defaultAmpR;
-#endif
     bool currentlyReleasingNote = false, justDoneReleaseEnvelope = false;
 
     float curFilterCutoff = defaultFilterCutoff;
