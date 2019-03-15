@@ -295,5 +295,4 @@ private:
 
     bool rampingUp = false;
     int rampUpSamplesLeft = 0;
-    float rampUpLastValue = 0.f;    
 };

@@ -351,7 +351,6 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     curVelocity = velocity;
 
     rampingUp = true;
-    rampUpLastValue = 0;
     rampUpSamplesLeft = rampUpSamples;
 
     updateOscLevels();
@@ -376,7 +375,6 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
         if (getSampleRate() != 0.f && ! justDoneReleaseEnvelope)
         {
             rampingUp = false;
-            rampUpLastValue = 0;
             rampUpSamplesLeft = rampUpSamples;
 
             overlap->clear();
@@ -387,7 +385,6 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
         }
 
         justDoneReleaseEnvelope = false;
-
         clearCurrentNote();
     }
 }
@@ -424,7 +421,10 @@ void sBMP4Voice::processRampUp (dsp::AudioBlock<float>& block, int curBlockSize)
     DBG ("\tDEBUG RAMP UP " + String (rampUpSamples - rampUpSamplesLeft));
 #endif
     auto curRampUpLenght = jmin ((int) curBlockSize, rampUpSamplesLeft);
-    auto nextRampUpValue = rampUpLastValue + (float) curRampUpLenght / rampUpSamples;
+    auto prevRampUpValue = (rampUpSamples - rampUpSamplesLeft) / (float) rampUpSamples;
+    auto nextRampUpValue = prevRampUpValue + curRampUpLenght / (float) rampUpSamples;
+    auto incr = (nextRampUpValue - prevRampUpValue) / (curRampUpLenght);
+
     jassert (nextRampUpValue >= 0.f && nextRampUpValue <= 1.0001f);
 
     for (int c = 0; c < block.getNumChannels(); ++c)
@@ -432,12 +432,11 @@ void sBMP4Voice::processRampUp (dsp::AudioBlock<float>& block, int curBlockSize)
         for (int i = 0; i < curRampUpLenght; ++i)
         {
             auto value = block.getSample (c, i);
-            auto ramp = rampUpLastValue + i * (nextRampUpValue - rampUpLastValue) / (curRampUpLenght);
+            auto ramp = prevRampUpValue + i * incr;
             block.setSample (c, i, value * ramp);
         }
     }
 
-    rampUpLastValue = nextRampUpValue;
     rampUpSamplesLeft -= curRampUpLenght;
 
     if (rampUpSamplesLeft <= 0)
@@ -497,7 +496,7 @@ void sBMP4Voice::assertForDiscontinuities (AudioBuffer<float>& outputBuffer, int
         {
             //@TODO need some kind of compression to avoid valoes about 1.f...
             auto curSample = outputBuffer.getSample (c, i);
-            //jassert (abs (curSample) < 1.5f);
+            jassert (abs (curSample) < 1.5f);
 
             if (c == 0)
             {

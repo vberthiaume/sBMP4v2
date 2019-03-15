@@ -184,6 +184,7 @@ inline float getVarAsFloat (const ValueTree& v, const Identifier& id) { return s
 inline String getVarAsString (const ValueTree& v, const Identifier& id) { return v.getProperty (id).toString(); }
 inline Identifier getVarAsIdentifier (const ValueTree& v, const Identifier& id) { return static_cast<Identifier> (v.getProperty (id)); }
 
+//@TODO make this a namespace and get rid of all (implicit) static keywords
 struct Helpers
 {
     static Image getImage (const void* imageData, const int dataSize)
@@ -223,6 +224,12 @@ struct Helpers
         return spec1.maximumBlockSize == spec2.maximumBlockSize
             && spec1.numChannels == spec2.numChannels
             && spec1.sampleRate == spec2.sampleRate;
+    }
+
+    template <class T>
+    static bool areSame (T a, T b, T e = std::numeric_limits <T>::epsilon())
+    {
+        return fabs (a - b) <= e;
     }
 };
 
