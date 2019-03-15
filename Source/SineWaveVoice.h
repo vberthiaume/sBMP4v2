@@ -237,6 +237,9 @@ private:
     void updateLfo();
     void processEnvelope (dsp::AudioBlock<float>& block);
     void processRampUp (dsp::AudioBlock<float>& block, int curBlockSize);
+    void processKillOverlap (dsp::AudioBlock<float>& block, int curBlockSize);
+    void applyKillRamp (AudioBuffer<float>& outputBuffer, int startSample, int numSamples);
+    void assertForDiscontinuities (AudioBuffer<float>& outputBuffer, int startSample, int numSamples, String dbgPrefix);
 
     std::set<int>* voicesBeingKilled;
 

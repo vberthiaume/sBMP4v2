@@ -368,10 +368,8 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
 
     if (allowTailOff)
     {
-        //if (! currentlyReleasingNote)
-            adsr.noteOff();
-
         currentlyReleasingNote = true;
+        adsr.noteOff();
     }
     else
     {
@@ -427,7 +425,7 @@ void sBMP4Voice::processRampUp (dsp::AudioBlock<float>& block, int curBlockSize)
 #endif
     auto curRampUpLenght = jmin ((int) curBlockSize, rampUpSamplesLeft);
     auto nextRampUpValue = rampUpLastValue + (float) curRampUpLenght / rampUpSamples;
-    jassert (nextRampUpValue >= 0.f && nextRampUpValue <= 1.f);
+    jassert (nextRampUpValue >= 0.f && nextRampUpValue <= 1.0001f);
 
     for (int c = 0; c < block.getNumChannels(); ++c)
     {
@@ -449,6 +447,87 @@ void sBMP4Voice::processRampUp (dsp::AudioBlock<float>& block, int curBlockSize)
         DBG ("\tDEBUG RAMP UP DONE");
 #endif
     }
+}
+
+void sBMP4Voice::processKillOverlap (dsp::AudioBlock<float>& block, int curBlockSize)
+{
+#if DEBUG_VOICES
+    DBG ("\tDEBUG ADD OVERLAP" + String (overlapIndex));
+#endif
+
+    auto curSamples = jmin (killRampSamples - overlapIndex, (int) curBlockSize);
+
+    for (int c = 0; c < block.getNumChannels(); ++c)
+        for (int i = 0; i < curSamples; ++i)
+        {
+            auto prev = block.getSample (c, i);
+            auto overl = overlap->getSample (c, overlapIndex + i);
+            auto total = prev + overl;
+
+            jassert (total > -1 && total < 1);
+
+            block.setSample (c, i, total);
+
+#if PRINT_ALL_SAMPLES
+            if (c == 0)
+                DBG ("\tADD\t" + String (prev) + "\t" + String (overl) + "\t" + String (total));
+#endif
+        }
+
+    overlapIndex += curSamples;
+
+    if (overlapIndex >= killRampSamples)
+    {
+        overlapIndex = -1;
+        voicesBeingKilled->erase (voiceId);
+#if DEBUG_VOICES
+        DBG ("\tDEBUG OVERLAP DONE");
+#endif
+    }
+}
+
+void sBMP4Voice::assertForDiscontinuities (AudioBuffer<float>& outputBuffer, int startSample, int numSamples, String dbgPrefix)
+{
+    auto prev = outputBuffer.getSample (0, startSample);
+    auto prevDiff = abs (outputBuffer.getSample (0, startSample + 1) - prev);
+
+    for (int c = 0; c < outputBuffer.getNumChannels(); ++c)
+    {
+        for (int i = startSample; i < startSample + numSamples; ++i)
+        {
+            //@TODO need some kind of compression to avoid valoes about 1.f...
+            auto curSample = outputBuffer.getSample (c, i);
+            //jassert (abs (curSample) < 1.5f);
+
+            if (c == 0)
+            {
+#if PRINT_ALL_SAMPLES
+                DBG (dbgPrefix + String (outputBuffer.getSample (0, i)));
+#endif
+                auto cur = outputBuffer.getSample (0, i);
+                jassert (abs (cur - prev) < .2f);
+
+                auto curDiff = abs (cur - prev);
+                jassert (curDiff - prevDiff < .08f);
+
+                prev = cur;
+                prevDiff = curDiff;
+            }
+        }
+    }
+}
+
+void sBMP4Voice::applyKillRamp (AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
+{
+    outputBuffer.applyGainRamp (startSample, numSamples, 1.f, 0.f);
+    currentlyKillingVoice = false;
+
+#if DEBUG_VOICES
+    DBG ("\tDEBUG START KILLRAMP");
+    assertForDiscontinuities (outputBuffer, startSample, numSamples, "\tBUILDING KILLRAMP\t");
+    DBG ("\tDEBUG stop KILLRAMP");
+#endif
+
 }
 
 void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
@@ -489,40 +568,7 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
             processRampUp (block2, curBlockSize);
 
         if (overlapIndex > -1)
-        {
-#if DEBUG_VOICES
-            DBG ("\tDEBUG ADD OVERLAP" + String (overlapIndex));
-#endif
-            auto curSamples = jmin (killRampSamples - overlapIndex, (int) curBlockSize);
-
-            for (int c = 0; c < block2.getNumChannels(); ++c)
-                for (int i = 0; i < curSamples; ++i)
-                {
-                    auto prev = block2.getSample (c, i);
-                    auto overl = overlap->getSample (c, overlapIndex + i);
-                    auto total = prev + overl;
-
-                    jassert (total > -1 && total < 1);
-
-                    block2.setSample (c, i, total);
-#if PRINT_ALL_SAMPLES
-                    if (c == 0)
-                        DBG ("\tADD\t" + String (prev) + "\t" + String (overl) + "\t" + String (total));
-#endif
-                }
-
-            overlapIndex += curSamples;
-
-            if (overlapIndex >= killRampSamples)
-            {
-                overlapIndex = -1;
-                //overlap->clear();
-                voicesBeingKilled->erase (voiceId);
-#if DEBUG_VOICES
-                DBG ("\tDEBUG OVERLAP DONE");
-#endif
-            }
-        }
+            processKillOverlap (block2, curBlockSize);
 
         pos += curBlockSize;
         lfoUpdateCounter -= curBlockSize;
@@ -537,62 +583,9 @@ void sBMP4Voice::renderNextBlock (AudioBuffer<float>& outputBuffer, int startSam
     dsp::AudioBlock<float> (outputBuffer).getSubBlock ((size_t) startSample, (size_t) numSamples).add (osc2Block);
 
     if (currentlyKillingVoice)
-    {
-        outputBuffer.applyGainRamp (startSample, numSamples, 1.f, 0.f);
-        currentlyKillingVoice = false;
-
-        for (int c = 0; c < outputBuffer.getNumChannels(); ++c)
-        {
-            for (int i = startSample; i < startSample + numSamples; ++i)
-            {
-                auto asdf = outputBuffer.getSample (c, i);
-                jassert (asdf > -1 && asdf < 1);
-            }
-        }
-
-#if PRINT_ALL_SAMPLES
-        DBG ("\tDEBUG START RAMP");
-        auto prev = abs (outputBuffer.getSample (0, startSample));
-        auto prevDiff = abs (outputBuffer.getSample (0, startSample + 1)) - prev;
-
-        for (int i = startSample; i < startSample + numSamples; ++i)
-        {
-            auto cur = abs (outputBuffer.getSample (0, i));
-            DBG ("\tBUILDING RAMP\t" + String (cur));
-
-            auto curDiff = abs (cur - prev);
-
-            if (abs (curDiff - prevDiff) > .05)
-            {
-                int j = 0;
-            }
-            prev = cur;
-            prevDiff = curDiff;
-        }
-
-        DBG ("\tDEBUG stop RAMP");
-#endif
-    }
-#if PRINT_ALL_SAMPLES
+        applyKillRamp (outputBuffer, startSample, numSamples);
+#if DEBUG_VOICES
     else
-    {
-        auto prev = abs (outputBuffer.getSample (0, startSample));
-        auto prevDiff = abs (outputBuffer.getSample (0, startSample + 1)) - prev;
-        for (int i = startSample; i < startSample + numSamples; ++i)
-        {
-            DBG (outputBuffer.getSample (0, i));
-            auto cur = abs (outputBuffer.getSample (0, i));
-            auto curDiff = abs (cur - prev);
-
-            if (cur - prev > .05f && abs (curDiff - prevDiff) > .05f)
-            {
-                int j = 0;
-            }
-            prev = cur;
-            prevDiff = curDiff;
-        }
-    }
+        assertForDiscontinuities (outputBuffer, startSample, numSamples, {});
 #endif
-
-    /*voicesBeingKilled->erase (voiceId);*/
 }
