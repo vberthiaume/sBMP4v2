@@ -283,6 +283,6 @@ private:
 
     bool rampingUp = false;
     int rampUpSamplesLeft = 0;
-    
-    float env{};
+
+    float filterEnvelope{};
 };
