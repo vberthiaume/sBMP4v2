@@ -193,6 +193,7 @@ public:
     }
 
     void setAmpParam (StringRef parameterID, float newValue);
+    void setFilterEnvParam (StringRef parameterID, float newValue);
 
     void setLfoShape (int shape);
     void setLfoDest (int dest);
@@ -247,8 +248,8 @@ private:
 
     dsp::ProcessorChain<dsp::LadderFilter<float>, dsp::Gain<float>> processorChain;
 
-    ADSR adsr;
-    ADSR::Parameters curParams;
+    ADSR ampADSR, filterEnvADSR;
+    ADSR::Parameters ampParams, filterEnvParams;
     bool currentlyReleasingNote = false, justDoneReleaseEnvelope = false;
 
     float curFilterCutoff = defaultFilterCutoff;

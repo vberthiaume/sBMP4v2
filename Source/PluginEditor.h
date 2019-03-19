@@ -15,7 +15,7 @@ public:
         tolerance (snapTolerance)
     {
         setLookAndFeel (&lf);
-        //setPopupDisplayEnabled (true, false, nullptr);
+        setPopupDisplayEnabled (true, false, nullptr);
     }
 
     ~SnappingSlider()
@@ -92,9 +92,11 @@ private:
     ButtonGroupComponent osc1ShapeButtons, osc2ShapeButtons;
 
     //FILTER
-    sBMP4Label filterCutoffLabel, filterResonanceLabel;
+    sBMP4Label filterCutoffLabel, filterResonanceLabel, filterEnvAttackLabel, filterEnvDecayLabel, filterEnvSustainLabel, filterEnvReleaseLabel;
     SnappingSlider filterCutoffSlider, filterResonanceSlider;
     AudioProcessorValueTreeState::SliderAttachment filterCutoffAttachment, filterResonanceAttachment;
+    SnappingSlider filterEnvAttackSlider, filterEnvDecaySlider, filterEnvSustainSlider, filterEnvReleaseSlider;
+    AudioProcessorValueTreeState::SliderAttachment filterEnvAttackAttachment, filterEnvDecayAttachment, filterEnvSustainAttachment, filterEnvReleaseAttachment;
 
     //AMPLIFIER
     sBMP4Label ampAttackLabel, ampDecayLabel, ampSustainLabel, ampReleaseLabel;

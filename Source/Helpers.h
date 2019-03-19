@@ -103,6 +103,11 @@ namespace sBMP4AudioProcessorIDs
     const String ampSustainID = "ampSustainID";
     const String ampReleaseID = "ampReleaseID";
 
+    const String filterEnvAttackID = "filterEnvAttackID";
+    const String filterEnvDecayID = "filterEnvDecayID";
+    const String filterEnvSustainID = "filterEnvSustainID";
+    const String filterEnvReleaseID = "filterEnvReleaseID";
+
     const String lfoShapeID = "lfoShapeID";
     const String lfoDestID = "lfoDestID";
     const String lfoFreqID = "lfoFreqID";

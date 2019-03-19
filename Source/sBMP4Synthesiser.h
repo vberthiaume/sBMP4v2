@@ -65,6 +65,13 @@ public:
             for (auto voice : voices)
                 dynamic_cast<sBMP4Voice*> (voice)->setAmpParam (parameterID, newValue);
 
+        else if (parameterID == sBMP4AudioProcessorIDs::filterEnvAttackID
+                || parameterID == sBMP4AudioProcessorIDs::filterEnvDecayID
+                || parameterID == sBMP4AudioProcessorIDs::filterEnvSustainID
+                || parameterID == sBMP4AudioProcessorIDs::filterEnvReleaseID)
+            for (auto voice : voices)
+                dynamic_cast<sBMP4Voice*> (voice)->setFilterEnvParam (parameterID, newValue);
+
         else if (parameterID == sBMP4AudioProcessorIDs::lfoShapeID)
             applyToAllVoices ([](sBMP4Voice* voice, float newValue) { voice->setLfoShape ((int) newValue); }, newValue);
         else if (parameterID == sBMP4AudioProcessorIDs::lfoDestID)

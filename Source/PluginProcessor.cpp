@@ -36,6 +36,11 @@ sBMP4AudioProcessor::sBMP4AudioProcessor() :
         std::make_unique<AudioParameterFloat>   (ampSustainID, ampSustainSliderDesc, sustainRange, defaultAmpS),
         std::make_unique<AudioParameterFloat>   (ampReleaseID, ampReleaseSliderDesc, releaseRange, defaultAmpR),
 
+        std::make_unique<AudioParameterFloat>   (filterEnvAttackID, ampAttackSliderDesc, attackRange, defaultAmpA),
+        std::make_unique<AudioParameterFloat>   (filterEnvDecayID, ampDecaySliderDesc, decayRange, defaultAmpD),
+        std::make_unique<AudioParameterFloat>   (filterEnvSustainID, ampSustainSliderDesc, sustainRange, defaultAmpS),
+        std::make_unique<AudioParameterFloat>   (filterEnvReleaseID, ampReleaseSliderDesc, releaseRange, defaultAmpR),
+
         std::make_unique<AudioParameterFloat>   (lfoFreqID,   lfoFreqSliderDesc, lfoRange, defaultLfoFreq),
         std::make_unique<AudioParameterChoice>  (lfoShapeID, lfoShapeDesc,  StringArray {lfoShape0, lfoShape1, /*lfoShape2,*/ lfoShape3, lfoShape4}, defaultLfoShape),
         std::make_unique<AudioParameterChoice>  (lfoDestID, lfoDestDesc,  StringArray {lfoDest0, lfoDest1, lfoDest2, lfoDest3}, defaultLfoDest),
@@ -60,6 +65,13 @@ sBMP4AudioProcessor::sBMP4AudioProcessor() :
     state.addParameterListener (oscSubID, &synth);
     state.addParameterListener (oscMixID, &synth);
 
+    state.addParameterListener (filterCutoffID, &synth);
+    state.addParameterListener (filterResonanceID, &synth);
+    state.addParameterListener (filterEnvAttackID, &synth);
+    state.addParameterListener (filterEnvDecayID, &synth);
+    state.addParameterListener (filterEnvSustainID, &synth);
+    state.addParameterListener (filterEnvReleaseID, &synth);
+
     state.addParameterListener (ampAttackID, &synth);
     state.addParameterListener (ampDecayID, &synth);
     state.addParameterListener (ampSustainID, &synth);
@@ -69,9 +81,6 @@ sBMP4AudioProcessor::sBMP4AudioProcessor() :
     state.addParameterListener (lfoDestID, &synth);
     state.addParameterListener (lfoFreqID, &synth);
     state.addParameterListener (lfoAmountID, &synth);
-
-    state.addParameterListener (filterCutoffID, &synth);
-    state.addParameterListener (filterResonanceID, &synth);
 }
 
 sBMP4AudioProcessor::~sBMP4AudioProcessor()

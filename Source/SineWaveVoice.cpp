@@ -129,8 +129,11 @@ void sBMP4Voice::prepare (const dsp::ProcessSpec& spec)
     osc2.prepare (spec);
     processorChain.prepare (spec);
 
-    adsr.setSampleRate (spec.sampleRate);
-    adsr.setParameters (curParams);
+    ampADSR.setSampleRate (spec.sampleRate);
+    ampADSR.setParameters (ampParams);
+
+    filterEnvADSR.setSampleRate (spec.sampleRate);
+    filterEnvADSR.setParameters (ampParams);
 
     lfo.prepare ({spec.sampleRate / lfoUpdateRate, auvalMultiplier * spec.maximumBlockSize, spec.numChannels});
 }
@@ -161,15 +164,35 @@ void sBMP4Voice::setAmpParam (StringRef parameterID, float newValue)
     }
 
     if (parameterID == sBMP4AudioProcessorIDs::ampAttackID)
-        curParams.attack = newValue;
+        ampParams.attack = newValue;
     else if (parameterID == sBMP4AudioProcessorIDs::ampDecayID)
-        curParams.decay = newValue;
+        ampParams.decay = newValue;
     else if (parameterID == sBMP4AudioProcessorIDs::ampSustainID)
-        curParams.sustain = newValue;
+        ampParams.sustain = newValue;
     else if (parameterID == sBMP4AudioProcessorIDs::ampReleaseID)
-        curParams.release = newValue;
+        ampParams.release = newValue;
 
-    adsr.setParameters (curParams);
+    ampADSR.setParameters (ampParams);
+}
+
+void sBMP4Voice::setFilterEnvParam (StringRef parameterID, float newValue)
+{
+    if (newValue <= 0)
+    {
+        jassertfalse;
+        newValue = std::numeric_limits<float>::epsilon();
+    }
+
+    if (parameterID == sBMP4AudioProcessorIDs::filterEnvAttackID)
+        filterEnvParams.attack = newValue;
+    else if (parameterID == sBMP4AudioProcessorIDs::filterEnvDecayID)
+        filterEnvParams.decay = newValue;
+    else if (parameterID == sBMP4AudioProcessorIDs::filterEnvSustainID)
+        filterEnvParams.sustain = newValue;
+    else if (parameterID == sBMP4AudioProcessorIDs::filterEnvReleaseID)
+        filterEnvParams.release = newValue;
+
+    filterEnvADSR.setParameters (filterEnvParams);
 }
 
 //@TODO For now, all lfos oscillate between [0, 1], even though the random one (an only that one) should oscilate between [-1, 1]
@@ -315,9 +338,13 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     DBG ("\tDEBUG start: " + String (voiceId));
 #endif
 
-    adsr.setParameters (curParams);
-    adsr.reset();
-    adsr.noteOn();
+    ampADSR.setParameters (ampParams);
+    ampADSR.reset();
+    ampADSR.noteOn();
+
+    filterEnvADSR.setParameters (ampParams);
+    filterEnvADSR.reset();
+    filterEnvADSR.noteOn();
 
     pitchWheelPosition = currentPitchWheelPosition;
     updateOscFrequencies();
@@ -335,7 +362,8 @@ void sBMP4Voice::stopNote (float /*velocity*/, bool allowTailOff)
     if (allowTailOff)
     {
         currentlyReleasingNote = true;
-        adsr.noteOff();
+        ampADSR.noteOff();
+        filterEnvADSR.noteOff();
 
 #if DEBUG_VOICES
         DBG ("\tDEBUG tailoff voice: " + String (voiceId));
@@ -368,17 +396,16 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
     auto samples = block.getNumSamples();
     auto numChannels = block.getNumChannels();
 
-    //float env{};
     for (auto i = 0; i < samples; ++i)
     {
-        auto env = adsr.getNextSample();
-        filterEnvelope = env;
+        auto env = ampADSR.getNextSample();
+        filterEnvelope = filterEnvADSR.getNextSample();
 
         for (int c = 0; c < numChannels; ++c)
             block.getChannelPointer (c)[i] *= env;
     }
 
-    if (currentlyReleasingNote && !adsr.isActive())
+    if (currentlyReleasingNote && !ampADSR.isActive())
     {
         currentlyReleasingNote = false;
         justDoneReleaseEnvelope = true;
