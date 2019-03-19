@@ -154,8 +154,8 @@ namespace sBMP4AudioProcessorNames
     const String effectParam2Desc = "PARAM 2";
 #else
     const String effectGroupDesc = "REVERB";
-    const String effectParam1Desc = "PARAM 1";
-    const String effectParam2Desc = "PARAM 2";
+    const String effectParam1Desc = "ROOM";
+    const String effectParam2Desc = "MIX";
 #endif
 }
 
@@ -177,9 +177,6 @@ namespace sBMP4AudioProcessorChoices
     const String lfoDest1 = "Osc2 Freq";
     const String lfoDest2 = "Cutoff";
     const String lfoDest3 = "Resonance";
-
-    const String effectChoices0 = "Reverb";
-    const String effectChoices1 = "None";
 }
 
 inline bool getVarAsBool (const ValueTree& v, const Identifier& id) { return static_cast<bool> (v.getProperty (id)); }

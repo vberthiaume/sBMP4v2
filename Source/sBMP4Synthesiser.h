@@ -85,6 +85,9 @@ public:
             applyToAllVoices ([](sBMP4Voice* voice, float newValue) { voice->setFilterCutoff (newValue); }, newValue);
         else if (parameterID == sBMP4AudioProcessorIDs::filterResonanceID)
             applyToAllVoices ([](sBMP4Voice* voice, float newValue) { voice->setFilterResonance (newValue); }, newValue);
+
+        else if (parameterID == sBMP4AudioProcessorIDs::effectParam1ID || parameterID == sBMP4AudioProcessorIDs::effectParam2ID)
+            setEffectParam (parameterID, newValue);
         else
             jassertfalse;
     }
@@ -94,6 +97,16 @@ public:
     {
         for (auto voice : voices)
             operation (dynamic_cast<sBMP4Voice*> (voice), newValue);
+    }
+
+    void setEffectParam (StringRef parameterID, float newValue)
+    {
+        if (parameterID == sBMP4AudioProcessorIDs::effectParam1ID)
+            reverbParams.roomSize = newValue;
+        else if (parameterID == sBMP4AudioProcessorIDs::effectParam2ID)
+            reverbParams.wetLevel = newValue;
+
+        fxChain.get<reverbIndex>().setParameters (reverbParams);
     }
 
     void noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) override
@@ -132,6 +145,8 @@ private:
     std::set<int> voicesBeingKilled{};
 
     dsp::ProcessorChain<dsp::Reverb> fxChain;
+
+    dsp::Reverb::Parameters reverbParams;
 
     dsp::ProcessSpec curSpecs{};
 };
