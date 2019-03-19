@@ -51,6 +51,7 @@ namespace Constants
     static const float defaultLfoAmount = 0.f;
 
     static const float defaultEffectParam1 = 0.f;
+    static const float defaultEffectParam2 = 0.f;
 
     static const NormalisableRange<float> dBRange = {-12.f, 12.f};
     static const NormalisableRange<float> sliderRange = {0.f, 1.f};
@@ -147,9 +148,15 @@ namespace sBMP4AudioProcessorNames
     const String lfoFreqSliderDesc = "FREQUENCY";
     const String lfoAmountSliderDesc = "AMOUNT";
 
+#if 0
     const String effectGroupDesc = "EFFECT";
     const String effectParam1Desc = "PARAM 1";
     const String effectParam2Desc = "PARAM 2";
+#else
+    const String effectGroupDesc = "REVERB";
+    const String effectParam1Desc = "PARAM 1";
+    const String effectParam2Desc = "PARAM 2";
+#endif
 }
 
 namespace sBMP4AudioProcessorChoices

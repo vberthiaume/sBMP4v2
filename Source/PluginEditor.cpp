@@ -155,7 +155,7 @@ void sBMP4AudioProcessorEditor::resized()
         auto curComponentIndex = 0;
         for (int i = 0; i < numLines; ++i)
         {
-           auto lineBounds = groupBounds.removeFromTop (lineH);
+            auto lineBounds = groupBounds.removeFromTop (lineH);
 
             for (int j = 0; j < numColumns; ++j)
             {
@@ -172,13 +172,15 @@ void sBMP4AudioProcessorEditor::resized()
         }
     };
 
+    //top section
     setupGroup (oscGroup, topSection.removeFromLeft (4 * columnW + 2 * panelGap), {&osc1FreqSlider, &osc1TuningSlider, &osc1ShapeButtons, &oscSubSlider,
                                                                                    &osc2FreqSlider, &osc2TuningSlider, &osc2ShapeButtons, &oscMixSlider}, 2, 4);
-    setupGroup (ampGroup, bottomSection.removeFromLeft (4 * columnW + 2 * panelGap), {&ampAttackSlider,&ampDecaySlider, &ampSustainSlider, &ampReleaseSlider}, 2, 4);
-
     setupGroup (filterGroup, topSection, {&filterCutoffSlider, &filterResonanceSlider, nullptr, nullptr, &filterEnvAttackSlider,&filterEnvDecaySlider, &filterEnvSustainSlider, &filterEnvReleaseSlider}, 2, 4);
-    setupGroup (lfoGroup, bottomSection, {&lfoShapeButtons, &lfoFreqSlider, &lfoDestButtons, &lfoAmountSlider}, 2, 2);
-    //setupGroup (effectGroup, topSection, {&effectParam1Slider, &effectParam2Slider}, 1, 2);
+
+    //bottom section
+    setupGroup (lfoGroup, bottomSection.removeFromLeft (2 * columnW + panelGap), {&lfoShapeButtons, &lfoFreqSlider, &lfoDestButtons, &lfoAmountSlider}, 2, 2);
+    setupGroup (effectGroup, bottomSection.removeFromLeft (2 * columnW + panelGap), {&effectParam1Slider, &effectParam2Slider}, 2, 2);
+    setupGroup (ampGroup, bottomSection, {&ampAttackSlider,&ampDecaySlider, &ampSustainSlider, &ampReleaseSlider}, 2, 4);
 
 #if CPU_USAGE
     auto cpuSectionH = 100;
