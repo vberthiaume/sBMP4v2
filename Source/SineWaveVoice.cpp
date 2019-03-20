@@ -133,7 +133,7 @@ void sBMP4Voice::prepare (const dsp::ProcessSpec& spec)
     ampADSR.setParameters (ampParams);
 
     filterEnvADSR.setSampleRate (spec.sampleRate);
-    filterEnvADSR.setParameters (ampParams);
+    filterEnvADSR.setParameters (filterEnvParams);
 
     lfo.prepare ({spec.sampleRate / lfoUpdateRate, auvalMultiplier * spec.maximumBlockSize, spec.numChannels});
 }
@@ -277,7 +277,10 @@ void sBMP4Voice::setLfoDest (int dest)
     //reset everything
     lfoOsc1NoteOffset = 0.f;
     lfoOsc2NoteOffset = 0.f;
-    processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff);
+
+    if (lfoDest.curSelection == LfoDest::filterCutOff)
+        processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff);
+
     processorChain.get<filterIndex>().setResonance (curFilterResonance);
 
     //change the destination
@@ -294,8 +297,7 @@ void sBMP4Voice::pitchWheelMoved (int newPitchWheelValue)
 void sBMP4Voice::updateLfo()
 {
     //apply filter envelope
-    if (cutOffRange.convertFrom0to1 (filterEnvelope) > 0.f)
-        processorChain.get<filterIndex>().setCutoffFrequencyHz (cutOffRange.convertFrom0to1 (filterEnvelope));
+    processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff * (1 + filterEnvelope));
 
     float lfoOut;
     {
@@ -316,10 +318,11 @@ void sBMP4Voice::updateLfo()
             updateOscFrequencies();
             break;
 
-        case LfoDest::filterCurOff:
+        case LfoDest::filterCutOff:
         {
-            auto curoffFreqHz = jmap (lfoOut, 0.0f, 1.0f, 100.0f, 2000.0f);
-            processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff + curoffFreqHz);
+            auto lfoCutOffContributionHz = jmap (lfoOut, 0.0f, 1.0f, 10.0f, 10000.0f);
+            auto curCutOff = jmin (curFilterCutoff * (1 + filterEnvelope) + lfoCutOffContributionHz, 18000.f);
+            processorChain.get<filterIndex>().setCutoffFrequencyHz (curCutOff);
         }
         break;
 
@@ -342,7 +345,7 @@ void sBMP4Voice::startNote (int /*midiNoteNumber*/, float velocity, SynthesiserS
     ampADSR.reset();
     ampADSR.noteOn();
 
-    filterEnvADSR.setParameters (ampParams);
+    filterEnvADSR.setParameters (filterEnvParams);
     filterEnvADSR.reset();
     filterEnvADSR.noteOn();
 
@@ -398,8 +401,8 @@ void sBMP4Voice::processEnvelope (dsp::AudioBlock<float>& block)
 
     for (auto i = 0; i < samples; ++i)
     {
-        auto env = ampADSR.getNextSample();
         filterEnvelope = filterEnvADSR.getNextSample();
+        auto env = ampADSR.getNextSample();
 
         for (int c = 0; c < numChannels; ++c)
             block.getChannelPointer (c)[i] *= env;
@@ -498,9 +501,8 @@ void sBMP4Voice::assertForDiscontinuities (AudioBuffer<float>& outputBuffer, int
     {
         for (int i = startSample; i < startSample + numSamples; ++i)
         {
-            //@TODO need some kind of compression to avoid valoes about 1.f...
-            auto curSample = outputBuffer.getSample (c, i);
-            jassert (abs (curSample) < 1.5f);
+            //@TODO need some kind of compression to avoid values above 1.f...
+            jassert (abs (outputBuffer.getSample (c, i)) < 1.5f);
 
             if (c == 0)
             {
