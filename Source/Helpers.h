@@ -58,8 +58,10 @@ namespace Constants
     static const NormalisableRange<float> centeredSliderRange = {-0.5f, .5f};
 
     //envelope stuff
+    static const auto minA = .001f;
     static const auto minAmp = .01f;
-    static const auto defaultAmpA = minAmp;
+
+    static const auto defaultAmpA = minA;
     static const auto defaultAmpD = minAmp;
     static const auto defaultAmpS = 1.f;
     static const auto defaultAmpR = .25f;
@@ -68,7 +70,7 @@ namespace Constants
     static const auto ampSkewFactor = .5f;
     static const auto cutOffSkewFactor = .5f;
 
-    static const NormalisableRange<float> attackRange   {minAmp, 25.f, 0.f, ampSkewFactor};
+    static const NormalisableRange<float> attackRange   {minA, 25.f, 0.f, ampSkewFactor};
     static const NormalisableRange<float> decayRange    {minAmp, 25.f, 0.f, ampSkewFactor};
     static const NormalisableRange<float> sustainRange  {minAmp, 1.f,  0.f, sustainSkewFactor};
     static const NormalisableRange<float> releaseRange  {minAmp, 25.f, 0.f, ampSkewFactor};

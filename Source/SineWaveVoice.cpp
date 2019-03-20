@@ -297,7 +297,9 @@ void sBMP4Voice::pitchWheelMoved (int newPitchWheelValue)
 void sBMP4Voice::updateLfo()
 {
     //apply filter envelope
-    processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff * (1 + filterEnvelope));
+    //@TODO make this into a slider
+    const auto envelopeAmount = 2;
+    processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff * (1 + envelopeAmount * filterEnvelope));
 
     float lfoOut;
     {
@@ -321,7 +323,7 @@ void sBMP4Voice::updateLfo()
         case LfoDest::filterCutOff:
         {
             auto lfoCutOffContributionHz = jmap (lfoOut, 0.0f, 1.0f, 10.0f, 10000.0f);
-            auto curCutOff = jmin (curFilterCutoff * (1 + filterEnvelope) + lfoCutOffContributionHz, 18000.f);
+            auto curCutOff = jmin (curFilterCutoff * (1 + envelopeAmount * filterEnvelope) + lfoCutOffContributionHz, 18000.f);
             processorChain.get<filterIndex>().setCutoffFrequencyHz (curCutOff);
         }
         break;
