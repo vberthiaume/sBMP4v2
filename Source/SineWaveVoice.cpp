@@ -281,7 +281,8 @@ void sBMP4Voice::setLfoDest (int dest)
     if (lfoDest.curSelection == LfoDest::filterCutOff)
         processorChain.get<filterIndex>().setCutoffFrequencyHz (curFilterCutoff);
 
-    processorChain.get<filterIndex>().setResonance (curFilterResonance);
+    if (lfoDest.curSelection == LfoDest::filterResonance)
+        processorChain.get<filterIndex>().setResonance (curFilterResonance);
 
     //change the destination
     lfoDest.curSelection = dest;
@@ -329,7 +330,7 @@ void sBMP4Voice::updateLfo()
         break;
 
         case LfoDest::filterResonance:
-            processorChain.get<filterIndex>().setResonance (lfoOut);
+            processorChain.get<filterIndex>().setResonance (curFilterResonance * (1 + lfoOut));
             break;
 
         default:

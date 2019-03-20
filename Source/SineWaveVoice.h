@@ -168,6 +168,7 @@ public:
                 jassertfalse;
                 break;
         }
+        updateOscFrequencies();
     }
 
     void setOscSub (float newSub)
