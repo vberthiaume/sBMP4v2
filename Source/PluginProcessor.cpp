@@ -85,7 +85,6 @@ sBMP4AudioProcessor::sBMP4AudioProcessor() :
 
     state.addParameterListener (effectParam1ID, &synth);
     state.addParameterListener (effectParam2ID, &synth);
-
 }
 
 sBMP4AudioProcessor::~sBMP4AudioProcessor()
